@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encounter (EDM) Operational Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface2: #f7f9fc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --accent: #1e40af;
+  --accent-light: #dbeafe;
+  --accent2: #7c3aed;
+  --accent2-light: #ede9fe;
+  --green: #059669;
+  --green-light: #d1fae5;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --teal: #0891b2;
+  --teal-light: #cffafe;
+  --violet: #7c3aed;
+  --orange: #ea580c;
+  --orange-light: #ffedd5;
+  --text: #0f172a;
+  --text-mid: #374151;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  --header-h: 58px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: var(--shadow);
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-mark {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500; color: #fff;
+  flex-shrink: 0;
+}
+.header-title h1 {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.3px; line-height: 1.2;
+}
+.header-title span { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+/* Compact import button */
+.import-area { display: flex; align-items: center; gap: 8px; }
+.import-compact-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.import-compact-btn:hover { background: #1d3a8b; }
+.import-compact-btn svg { width: 14px; height: 14px; }
+#fileInput { display: none; }
+.import-pill {
+  display: none; align-items: center; gap: 6px;
+  background: var(--green-light); border: 1px solid #86efac;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--green);
+}
+.import-pill.visible { display: flex; }
+.clear-tiny {
+  background: none; border: none; color: #dc2626; cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0 0 0 2px;
+}
+.record-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--accent-light); border: 1px solid #93c5fd;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent);
+}
+.dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── CONTROLS BAR ── */
+.controls-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ctrl-group { display: flex; flex-direction: column; gap: 4px; }
+.ctrl-group-inline { display: flex; align-items: center; gap: 8px; }
+.ctrl-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.btn-group { display: flex; gap: 2px; }
+.btn {
+  padding: 5px 12px; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text-mid);
+  border-radius: 4px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ctrl-divider { width: 1px; height: 36px; background: var(--border); align-self: center; }
+.reset-btn {
+  padding: 5px 10px; background: transparent;
+  border: 1px solid #fca5a5; color: var(--red);
+  border-radius: 4px; cursor: pointer; font-size: 11px;
+  font-family: 'Inter', sans-serif; font-weight: 600;
+  transition: all 0.15s; align-self: flex-end;
+}
+.reset-btn:hover { background: var(--red-light); }
+
+/* Multi-select dropdown */
+.multiselect-wrap { position: relative; }
+.multiselect-trigger {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 5px 10px;
+  cursor: pointer; min-width: 180px; font-size: 11px;
+  color: var(--text-mid); font-family: 'Inter', sans-serif;
+  user-select: none; transition: border-color 0.15s;
+}
+.multiselect-trigger:hover, .multiselect-trigger.open { border-color: var(--accent); }
+.multiselect-trigger .arrow { margin-left: auto; font-size: 9px; color: var(--text-muted); transition: transform 0.15s; }
+.multiselect-trigger.open .arrow { transform: rotate(180deg); }
+.multiselect-badge {
+  background: var(--accent); color: #fff;
+  border-radius: 10px; padding: 1px 6px; font-size: 9px; font-weight: 700;
+}
+.multiselect-dropdown {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 6px; box-shadow: var(--shadow-md);
+  z-index: 300; min-width: 220px; max-height: 280px;
+  flex-direction: column;
+}
+.multiselect-dropdown.open { display: flex; }
+.ms-search {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+.ms-search input {
+  flex: 1; border: none; outline: none; font-size: 11px;
+  font-family: 'Inter', sans-serif; color: var(--text); background: transparent;
+}
+.ms-actions {
+  display: flex; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border);
+}
+.ms-action-btn {
+  font-size: 10px; color: var(--accent); cursor: pointer;
+  font-family: 'Inter', sans-serif; font-weight: 600; border: none; background: none; padding: 0;
+}
+.ms-list { overflow-y: auto; flex: 1; }
+.ms-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; cursor: pointer; font-size: 11px;
+  color: var(--text-mid); transition: background 0.1s;
+}
+.ms-item:hover { background: var(--accent-light); }
+.ms-item input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+.ms-item.hidden { display: none; }
+
+/* Date selects */
+.date-select {
+  appearance: none; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 5px;
+  color: var(--text-mid); padding: 5px 24px 5px 8px;
+  font-family: 'Inter', sans-serif; font-size: 11px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 7px center;
+}
+.date-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── MAIN ── */
+.main { padding: 20px 24px; }
+
+/* Section header */
+.section-hdr {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; margin-top: 20px;
+}
+.section-hdr:first-child { margin-top: 0; }
+.section-hdr h2 {
+  font-size: 12px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;
+}
+.section-hdr::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── KPI CARDS ── */
+.kpi-row { display: grid; grid-template-columns: repeat(8,1fr); gap: 12px; margin-bottom: 8px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 14px 12px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow); transition: box-shadow 0.2s, border-color 0.2s;
+}
+.kpi-card:hover { box-shadow: var(--shadow-md); border-color: var(--kpi-color, var(--accent)); }
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--kpi-color, var(--accent));
+}
+.kpi-icon-bg {
+  position: absolute; top: 10px; right: 10px;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--kpi-bg, var(--accent-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; padding-right: 32px; line-height: 1.3; }
+.kpi-value { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; line-height: 1; }
+.kpi-sub { font-size: 10px; color: var(--text-light); font-family: 'DM Mono', monospace; margin-top: 5px; }
+
+/* ── CHART GRID LAYOUTS ── */
+.charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.charts-1col { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+.charts-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+.chart-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; box-shadow: var(--shadow);
+}
+.chart-card-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 14px; gap: 8px;
+}
+.chart-card-hdr-left h3 { font-size: 12px; font-weight: 700; color: var(--text); }
+.chart-card-hdr-left p { font-size: 10px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.chart-badge {
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 7px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px;
+}
+.table-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; flex-wrap: wrap; }
+.table-toolbar-left h3 { font-size: 12px; font-weight: 700; color: var(--text); }
+.table-toolbar-left p { font-size: 10px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.table-toolbar-right { display: flex; align-items: center; gap: 8px; }
+.download-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 5px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all 0.15s; border: 1px solid;
+}
+.download-xlsx { background: var(--green-light); color: var(--green); border-color: #86efac; }
+.download-xlsx:hover { background: #a7f3d0; }
+.download-csv { background: var(--amber-light); color: var(--amber); border-color: #fcd34d; }
+.download-csv:hover { background: #fde68a; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { border-bottom: 2px solid var(--border); }
+th {
+  padding: 7px 10px; text-align: left;
+  font-size: 10px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap;
+  background: var(--surface2);
+}
+th:first-child { border-radius: 4px 0 0 4px; }
+th:last-child { border-radius: 0 4px 4px 0; }
+th.right { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:hover { background: #f8fafc; }
+td {
+  padding: 8px 10px; font-size: 11px;
+  font-family: 'DM Mono', monospace; color: var(--text-mid);
+  white-space: nowrap;
+}
+td.right { text-align: right; }
+td.bold { color: var(--text); font-weight: 600; }
+.market-chip {
+  display: inline-block; font-size: 10px; font-family: 'Inter', sans-serif;
+  padding: 2px 7px; border-radius: 4px; font-weight: 600; white-space: nowrap;
+}
+.fpa-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.fpa-bar-bg { width: 50px; height: 4px; background: var(--border); border-radius: 2px; flex-shrink: 0; }
+.fpa-bar-fill { height: 100%; border-radius: 2px; }
+.no-data { text-align: center; padding: 40px; color: var(--text-light); font-family: 'DM Mono', monospace; font-size: 12px; }
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center; padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-light);
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* responsive */
+@media (max-width: 1400px) {
+  .kpi-row { grid-template-columns: repeat(4,1fr); }
+}
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: repeat(4,1fr); }
+  .charts-2col { grid-template-columns: 1fr; }
+  .charts-3col { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .main { padding: 12px; }
+  .header { padding: 0 12px; }
+  .controls-bar { padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">EDM</div>
+    <div class="header-title">
+      <h1>Encounter (EDM) Operational Performance Dashboard</h1>
+      <span>EH EDM · Claims Processing Analytics · Mar 2025 – Mar 2026</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="record-badge"><div class="dot"></div><span id="recordCount">435 Records</span></div>
+    <div class="import-area">
+      <div class="import-pill" id="importPill">
+        <span id="importPillText">File loaded</span>
+        <button class="clear-tiny" onclick="clearImport()" title="Clear import">✕</button>
+      </div>
+      <button class="import-compact-btn" onclick="document.getElementById('fileInput').click()" title="Import Excel file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import .xlsx
+      </button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+    </div>
+  </div>
+</header>
+
+<!-- CONTROLS -->
+<div class="controls-bar">
+  <div class="ctrl-group">
+    <div class="ctrl-label">Period View</div>
+    <div class="btn-group">
+      <button class="btn active" onclick="setPeriod('monthly',this)">Monthly</button>
+      <button class="btn" onclick="setPeriod('quarterly',this)">Quarterly</button>
+      <button class="btn" onclick="setPeriod('annual',this)">Annual</button>
+    </div>
+  </div>
+  <div class="ctrl-divider"></div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Market</div>
+    <div class="multiselect-wrap" id="ms-market">
+      <div class="multiselect-trigger" onclick="toggleMS('ms-market')">
+        <span id="ms-market-label">All Markets</span>
+        <span class="multiselect-badge" id="ms-market-badge" style="display:none">0</span>
+        <span class="arrow">▾</span>
+      </div>
+      <div class="multiselect-dropdown" id="ms-market-dd">
+        <div class="ms-search"><span>🔍</span><input placeholder="Search markets…" oninput="filterMS('ms-market',this.value)"></div>
+        <div class="ms-actions">
+          <button class="ms-action-btn" onclick="selectAllMS('ms-market')">Select All</button>
+          <span style="color:var(--border2)">|</span>
+          <button class="ms-action-btn" onclick="clearAllMS('ms-market')">Clear All</button>
+        </div>
+        <div class="ms-list" id="ms-market-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Category</div>
+    <div class="multiselect-wrap" id="ms-category">
+      <div class="multiselect-trigger" onclick="toggleMS('ms-category')">
+        <span id="ms-category-label">All Categories</span>
+        <span class="multiselect-badge" id="ms-category-badge" style="display:none">0</span>
+        <span class="arrow">▾</span>
+      </div>
+      <div class="multiselect-dropdown" id="ms-category-dd">
+        <div class="ms-search"><span>🔍</span><input placeholder="Search categories…" oninput="filterMS('ms-category',this.value)"></div>
+        <div class="ms-actions">
+          <button class="ms-action-btn" onclick="selectAllMS('ms-category')">Select All</button>
+          <span style="color:var(--border2)">|</span>
+          <button class="ms-action-btn" onclick="clearAllMS('ms-category')">Clear All</button>
+        </div>
+        <div class="ms-list" id="ms-category-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Date Range</div>
+    <div class="ctrl-group-inline">
+      <select class="date-select" id="fromMonth" onchange="applyFilters()"></select>
+      <span style="font-size:11px;color:var(--text-muted)">→</span>
+      <select class="date-select" id="toMonth" onchange="applyFilters()"></select>
+    </div>
+  </div>
+  <div class="ctrl-group" style="justify-content:flex-end;align-self:flex-end">
+    <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- KPIs -->
+  <div class="section-hdr"><h2>Executive Summary</h2></div>
+  <div class="kpi-row">
+    <div class="kpi-card" style="--kpi-color:#7c3aed;--kpi-bg:#ede9fe">
+      <div class="kpi-icon-bg">🗂️</div>
+      <div class="kpi-label">Batch Count</div>
+      <div class="kpi-value" id="kpiBatch">—</div>
+      <div class="kpi-sub" id="kpiBatchSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#0891b2;--kpi-bg:#cffafe">
+      <div class="kpi-icon-bg">📅</div>
+      <div class="kpi-label">Schedule Count</div>
+      <div class="kpi-value" id="kpiSchedule">—</div>
+      <div class="kpi-sub" id="kpiScheduleSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#1e40af;--kpi-bg:#dbeafe">
+      <div class="kpi-icon-bg">📊</div>
+      <div class="kpi-label">Total Processed</div>
+      <div class="kpi-value" id="kpiProcessed">—</div>
+      <div class="kpi-sub" id="kpiProcessedSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#059669;--kpi-bg:#d1fae5">
+      <div class="kpi-icon-bg">💰</div>
+      <div class="kpi-label">Total Paid Amount</div>
+      <div class="kpi-value" id="kpiPaid">—</div>
+      <div class="kpi-sub" id="kpiPaidSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#ea580c;--kpi-bg:#ffedd5">
+      <div class="kpi-icon-bg">📤</div>
+      <div class="kpi-label">Total Submitted</div>
+      <div class="kpi-value" id="kpiSubmit">—</div>
+      <div class="kpi-sub" id="kpiSubmitSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#d97706;--kpi-bg:#fef3c7">
+      <div class="kpi-icon-bg">🎯</div>
+      <div class="kpi-label">First Pass Accept %</div>
+      <div class="kpi-value" id="kpiFPA">—</div>
+      <div class="kpi-sub" id="kpiFPASub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#059669;--kpi-bg:#d1fae5">
+      <div class="kpi-icon-bg">✅</div>
+      <div class="kpi-label">Total Accepted</div>
+      <div class="kpi-value" id="kpiAccept">—</div>
+      <div class="kpi-sub" id="kpiAcceptSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#dc2626;--kpi-bg:#fee2e2">
+      <div class="kpi-icon-bg">❌</div>
+      <div class="kpi-label">Total Rejected</div>
+      <div class="kpi-value" id="kpiReject">—</div>
+      <div class="kpi-sub" id="kpiRejectSub">—</div>
+    </div>
+  </div>
+
+  <!-- VOLUME & PAYMENT TRENDS -->
+  <div class="section-hdr"><h2>Volume &amp; Payment Trends Over Time</h2></div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend Over Time</h3>
+          <p>Processed · Submitted · Accepted counts + FPA % trend line</p>
+        </div>
+        <span class="chart-badge" id="trendBadge">Monthly</span>
+      </div>
+      <canvas id="trendChart" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Total Paid Amount Over Time</h3>
+          <p>Aggregate paid amount by period</p>
+        </div>
+        <span class="chart-badge">$USD</span>
+      </div>
+      <canvas id="paidTimeChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- VOLUME & PAYMENT ACROSS MARKETS -->
+  <div class="section-hdr"><h2>Volume &amp; Payment Across Markets</h2></div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend Across Markets</h3>
+          <p>Processed · Submitted · Accepted + FPA % per market</p>
+        </div>
+        <span class="chart-badge">By Market</span>
+      </div>
+      <canvas id="volMarketChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Total Paid Across Markets</h3>
+          <p>Aggregate paid amount per market</p>
+        </div>
+        <span class="chart-badge">$USD · Market</span>
+      </div>
+      <canvas id="paidMarketChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- VOLUME BY CATEGORY × MARKET -->
+  <div class="section-hdr"><h2>Volume by Category Across Markets</h2></div>
+  <div class="charts-1col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend per Category Across Markets</h3>
+          <p>Processed · Submitted · Accepted + FPA % — top 8 categories by volume</p>
+        </div>
+        <span class="chart-badge">Category × Market</span>
+      </div>
+      <canvas id="catMarketChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- BATCH & SCHEDULE -->
+  <div class="section-hdr"><h2>Batch &amp; Schedule Activity</h2></div>
+  <div class="charts-3col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule Over Time</h3>
+          <p>Total counts by period</p>
+        </div>
+      </div>
+      <canvas id="batchTimeChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule by Market</h3>
+          <p>Total counts per market</p>
+        </div>
+      </div>
+      <canvas id="batchMarketChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule by Category</h3>
+          <p>Total counts per schedule category</p>
+        </div>
+      </div>
+      <canvas id="batchCatChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="section-hdr"><h2>Market × Category Performance Detail</h2></div>
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="table-toolbar-left">
+        <h3>Market × Category Performance Table</h3>
+        <p id="tableSubTitle">Aggregated data for selected filters</p>
+      </div>
+      <div class="table-toolbar-right">
+        <span style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace" id="tableRowCount">0 rows</span>
+        <button class="download-btn download-xlsx" onclick="downloadTable('xlsx')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download .xlsx
+        </button>
+        <button class="download-btn download-csv" onclick="downloadTable('csv')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download .csv
+        </button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Market</th>
+            <th>Category</th>
+            <th class="right">Processed</th>
+            <th class="right">Submitted</th>
+            <th class="right">Accepted</th>
+            <th class="right">Rejected</th>
+            <th class="right">FPA Rate</th>
+            <th class="right">Paid ($)</th>
+            <th class="right">Batches</th>
+            <th class="right">Schedules</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="10" class="no-data">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+<div class="footer" id="footerText">Encounter (EDM) Operational Performance Dashboard · EH_EDM_Dashboard_Sample_05032026.xlsx · 435 records · Mar 2025 – Mar 2026</div>
+
+<script>
+// =====================================================================
+// DATA
+// =====================================================================
+const RAW = [{"month":"2025-03","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":120,"paid":18632.67,"submit":120,"accept":116,"reject":4,"batch":5,"schedule":5},{"month":"2025-03","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Optum","processed":16,"paid":0,"submit":16,"accept":16,"reject":0,"batch":2,"schedule":2},{"month":"2025-03","market":"Affinity","category":"Medical-Regular","processed":9385,"paid":4138483.17,"submit":8582,"accept":8267,"reject":315,"batch":3,"schedule":3},{"month":"2025-03","market":"Affinity","category":"Medical-Remediation","processed":13,"paid":18594.91,"submit":13,"accept":7,"reject":6,"batch":1,"schedule":1},{"month":"2025-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":1210,"paid":251229.98,"submit":1210,"accept":1210,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":308,"paid":84702.13,"submit":308,"accept":269,"reject":39,"batch":5,"schedule":5},{"month":"2025-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":297,"paid":36261.5,"submit":297,"accept":294,"reject":3,"batch":1,"schedule":1},{"month":"2025-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":2,"paid":0,"submit":2,"accept":2,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2917,"paid":736911.06,"submit":2806,"accept":2349,"reject":457,"batch":3,"schedule":3},{"month":"2025-03","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":65614,"paid":9621437.53,"submit":65614,"accept":65614,"reject":0,"batch":19,"schedule":19},{"month":"2025-03","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":2999,"paid":404145.22,"submit":2999,"accept":2821,"reject":178,"batch":1,"schedule":1},{"month":"2025-03","market":"CCI Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":58197,"paid":3378684,"submit":58197,"accept":58153,"reject":44,"batch":12,"schedule":1},{"month":"2025-03","market":"CCI Medicare","category":"Medical-Regular","processed":110957,"paid":35934841.11,"submit":109093,"accept":105892,"reject":3200,"batch":24,"schedule":3},{"month":"2025-03","market":"CT APCD","category":"Medical-Regular","processed":314469,"paid":120295642.81,"submit":293555,"accept":293555,"reject":0,"batch":158,"schedule":1},{"month":"2025-03","market":"PPO Medicare","category":"Medical-Regular","processed":115,"paid":31606.16,"submit":113,"accept":106,"reject":7,"batch":1,"schedule":1},{"month":"2025-04","market":"Affinity","category":"CHART-VERADIGM","processed":86,"paid":0,"submit":86,"accept":85,"reject":1,"batch":6,"schedule":6},{"month":"2025-04","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":3881,"paid":0,"submit":3881,"accept":3804,"reject":77,"batch":14,"schedule":14},{"month":"2025-04","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":62,"paid":8637.23,"submit":62,"accept":61,"reject":1,"batch":4,"schedule":4},{"month":"2025-04","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":19338,"paid":901365.61,"submit":19338,"accept":19276,"reject":62,"batch":5,"schedule":2},{"month":"2025-04","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Optum","processed":3,"paid":0,"submit":3,"accept":3,"reject":0,"batch":2,"schedule":2},{"month":"2025-04","market":"Affinity","category":"Medical-Regular","processed":13201,"paid":6871580.84,"submit":12227,"accept":11688,"reject":539,"batch":4,"schedule":2},{"month":"2025-04","market":"Affinity","category":"Medical-Remediation","processed":773,"paid":181398.01,"submit":433,"accept":421,"reject":12,"batch":2,"schedule":2},{"month":"2025-04","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":100,"paid":0,"submit":100,"accept":100,"reject":0,"batch":6,"schedule":6},{"month":"2025-04","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":1108,"paid":0,"submit":1108,"accept":1103,"reject":5,"batch":14,"schedule":14},{"month":"2025-04","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":29,"paid":4734.95,"submit":29,"accept":26,"reject":3,"batch":4,"schedule":4},{"month":"2025-04","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":5044,"paid":263752.25,"submit":5044,"accept":5015,"reject":29,"batch":2,"schedule":1},{"month":"2025-04","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":1,"paid":0,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2025-04","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":3349,"paid":1232666.58,"submit":3246,"accept":2907,"reject":339,"batch":2,"schedule":2},{"month":"2025-04","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":102,"paid":10105.15,"submit":96,"accept":78,"reject":18,"batch":2,"schedule":2},{"month":"2025-04","market":"CCI Medicare","category":"CHART-VERADIGM","processed":1956,"paid":0,"submit":1956,"accept":1933,"reject":23,"batch":12,"schedule":12},{"month":"2025-04","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":237164,"paid":0,"submit":237164,"accept":237098,"reject":66,"batch":55,"schedule":55},{"month":"2025-04","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":7988,"paid":1560933.79,"submit":7988,"accept":7521,"reject":467,"batch":10,"schedule":10},{"month":"2025-04","market":"CCI Medicare","category":"Medical-Regular","processed":135692,"paid":40941781.61,"submit":133676,"accept":121052,"reject":3585,"batch":28,"schedule":2},{"month":"2025-04","market":"CCI Medicare","category":"Medical-Remediation","processed":1039,"paid":70084.68,"submit":919,"accept":843,"reject":76,"batch":2,"schedule":2},{"month":"2025-04","market":"CT APCD","category":"Medical-Regular","processed":949241,"paid":310386358.99,"submit":832869,"accept":832869,"reject":0,"batch":475,"schedule":3},{"month":"2025-04","market":"MA APCD","category":"Medical-Regular","processed":1219,"paid":339714.6,"submit":881,"accept":881,"reject":0,"batch":2,"schedule":2},{"month":"2025-04","market":"PPO Medicare","category":"Medical-Regular","processed":74,"paid":22888.16,"submit":72,"accept":68,"reject":4,"batch":1,"schedule":1},{"month":"2025-05","market":"Affinity","category":"CHART-VERADIGM","processed":153,"paid":0,"submit":153,"accept":152,"reject":1,"batch":3,"schedule":3},{"month":"2025-05","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":434,"paid":72425.23,"submit":434,"accept":434,"reject":0,"batch":1,"schedule":1},{"month":"2025-05","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":570,"paid":0,"submit":570,"accept":285,"reject":285,"batch":2,"schedule":2},{"month":"2025-05","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":58,"paid":6734.37,"submit":58,"accept":57,"reject":1,"batch":4,"schedule":4},{"month":"2025-05","market":"Affinity","category":"Medical-Regular","processed":10874,"paid":3230629.95,"submit":10055,"accept":9372,"reject":683,"batch":4,"schedule":2},{"month":"2025-05","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":71,"paid":0,"submit":71,"accept":67,"reject":4,"batch":8,"schedule":8},{"month":"2025-05","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":183,"paid":42638.35,"submit":183,"accept":183,"reject":0,"batch":2,"schedule":2},{"month":"2025-05","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":184,"paid":0,"submit":184,"accept":92,"reject":92,"batch":2,"schedule":2},{"month":"2025-05","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":22,"paid":4666.97,"submit":22,"accept":21,"reject":1,"batch":4,"schedule":4},{"month":"2025-05","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":1,"paid":0,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2025-05","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":3797,"paid":1268342.21,"submit":3667,"accept":2912,"reject":755,"batch":2,"schedule":2},{"month":"2025-05","market":"CCI Medicare","category":"CHART-VERADIGM","processed":1205,"paid":0,"submit":1205,"accept":1168,"reject":37,"batch":12,"schedule":12},{"month":"2025-05","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":15346,"paid":2384959.45,"submit":15346,"accept":15346,"reject":0,"batch":4,"schedule":4},{"month":"2025-05","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":58158,"paid":0,"submit":58158,"accept":29078,"reject":29080,"batch":12,"schedule":12},{"month":"2025-05","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1293,"paid":223600.41,"submit":1293,"accept":1244,"reject":49,"batch":4,"schedule":4},{"month":"2025-05","market":"CCI Medicare","category":"Medical-Regular","processed":131389,"paid":40643478.36,"submit":129096,"accept":124766,"reject":4330,"batch":27,"schedule":2},{"month":"2025-05","market":"CCI Medicare","category":"Medical-Remediation","processed":1,"paid":2593.55,"submit":1,"accept":0,"reject":1,"batch":1,"schedule":1},{"month":"2025-05","market":"CT APCD","category":"Medical-Regular","processed":528743,"paid":172030014.35,"submit":454621,"accept":454621,"reject":0,"batch":265,"schedule":1},{"month":"2025-05","market":"MA APCD","category":"Medical-Regular","processed":580,"paid":200353.98,"submit":433,"accept":433,"reject":0,"batch":1,"schedule":1},{"month":"2025-05","market":"PPO Medicare","category":"Medical-Regular","processed":129,"paid":53598.68,"submit":129,"accept":125,"reject":4,"batch":1,"schedule":1},{"month":"2025-06","market":"Affinity","category":"CHART-VERADIGM","processed":2726,"paid":0,"submit":2209,"accept":2047,"reject":162,"batch":19,"schedule":19},{"month":"2025-06","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":247,"paid":0,"submit":247,"accept":247,"reject":0,"batch":1,"schedule":1},{"month":"2025-06","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":27,"paid":3125.1,"submit":27,"accept":26,"reject":1,"batch":5,"schedule":5},{"month":"2025-06","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Optum","processed":4,"paid":0,"submit":4,"accept":4,"reject":0,"batch":1,"schedule":1},{"month":"2025-06","market":"Affinity","category":"Medical-Regular","processed":13071,"paid":4098792.6,"submit":12252,"accept":11673,"reject":579,"batch":4,"schedule":3},{"month":"2025-06","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":512,"paid":0,"submit":470,"accept":421,"reject":42,"batch":16,"schedule":16},{"month":"2025-06","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":69,"paid":13839.48,"submit":69,"accept":69,"reject":0,"batch":5,"schedule":5},{"month":"2025-06","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":71,"paid":0,"submit":71,"accept":71,"reject":0,"batch":1,"schedule":1},{"month":"2025-06","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":14,"paid":2549.45,"submit":14,"accept":13,"reject":1,"batch":4,"schedule":4},{"month":"2025-06","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":4075,"paid":1127978.78,"submit":3910,"accept":3639,"reject":271,"batch":2,"schedule":2},{"month":"2025-06","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":80,"paid":16381.36,"submit":39,"accept":39,"reject":0,"batch":2,"schedule":2},{"month":"2025-06","market":"CCI Medicare","category":"CHART-VERADIGM","processed":5096,"paid":0,"submit":4638,"accept":3964,"reject":623,"batch":22,"schedule":22},{"month":"2025-06","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":7107,"paid":1175554.98,"submit":7107,"accept":7107,"reject":0,"batch":5,"schedule":5},{"month":"2025-06","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":28247,"paid":0,"submit":28247,"accept":28224,"reject":23,"batch":6,"schedule":6},{"month":"2025-06","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1220,"paid":214466.53,"submit":1220,"accept":1171,"reject":49,"batch":4,"schedule":4},{"month":"2025-06","market":"CCI Medicare","category":"Medical-Regular","processed":198779,"paid":57747362.81,"submit":196230,"accept":189814,"reject":6416,"batch":41,"schedule":2},{"month":"2025-06","market":"CCI Medicare","category":"Medical-Remediation","processed":442,"paid":409795.09,"submit":336,"accept":317,"reject":19,"batch":2,"schedule":2},{"month":"2025-07","market":"Affinity","category":"CHART-VERADIGM","processed":1223,"paid":0,"submit":1223,"accept":1161,"reject":62,"batch":16,"schedule":16},{"month":"2025-07","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":243,"paid":0,"submit":243,"accept":243,"reject":0,"batch":1,"schedule":1},{"month":"2025-07","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":52,"paid":6243.13,"submit":52,"accept":49,"reject":3,"batch":4,"schedule":4},{"month":"2025-07","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Optum","processed":6,"paid":0,"submit":6,"accept":6,"reject":0,"batch":1,"schedule":1},{"month":"2025-07","market":"Affinity","category":"Medical-Regular","processed":9332,"paid":4097899.66,"submit":8641,"accept":8484,"reject":157,"batch":3,"schedule":2},{"month":"2025-07","market":"Affinity","category":"Medical-Remediation","processed":36,"paid":6800.97,"submit":34,"accept":28,"reject":6,"batch":2,"schedule":2},{"month":"2025-07","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":7,"paid":0,"submit":7,"accept":7,"reject":0,"batch":2,"schedule":2},{"month":"2025-07","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":68,"paid":16383,"submit":68,"accept":68,"reject":0,"batch":4,"schedule":4},{"month":"2025-07","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":62,"paid":0,"submit":62,"accept":62,"reject":0,"batch":1,"schedule":1},{"month":"2025-07","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":18,"paid":3517.37,"submit":18,"accept":17,"reject":1,"batch":4,"schedule":4},{"month":"2025-07","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":1,"paid":0,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2025-07","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2700,"paid":686983.75,"submit":2513,"accept":2392,"reject":121,"batch":2,"schedule":2},{"month":"2025-07","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":148,"paid":11589.17,"submit":148,"accept":113,"reject":35,"batch":2,"schedule":2},{"month":"2025-07","market":"CCI Medicare","category":"CHART-VERADIGM","processed":1181,"paid":0,"submit":1181,"accept":1150,"reject":31,"batch":4,"schedule":4},{"month":"2025-07","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":5266,"paid":858557.71,"submit":5266,"accept":5266,"reject":0,"batch":4,"schedule":4},{"month":"2025-07","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":32555,"paid":0,"submit":32555,"accept":32540,"reject":15,"batch":7,"schedule":7},{"month":"2025-07","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1427,"paid":258684.84,"submit":1427,"accept":1377,"reject":50,"batch":5,"schedule":5},{"month":"2025-07","market":"CCI Medicare","category":"Medical-Regular","processed":131367,"paid":41180900.55,"submit":127498,"accept":125696,"reject":1802,"batch":27,"schedule":2},{"month":"2025-07","market":"CCI Medicare","category":"Medical-Remediation","processed":1477,"paid":105283.44,"submit":1442,"accept":1348,"reject":94,"batch":2,"schedule":2},{"month":"2025-07","market":"CT APCD","category":"Medical-Regular","processed":545546,"paid":183288639.18,"submit":485261,"accept":485261,"reject":0,"batch":273,"schedule":1},{"month":"2025-07","market":"MA APCD","category":"Medical-Regular","processed":911,"paid":296433.3,"submit":661,"accept":661,"reject":0,"batch":2,"schedule":2},{"month":"2025-07","market":"PPO Medicare","category":"Medical-Regular","processed":200,"paid":97219.41,"submit":163,"accept":161,"reject":2,"batch":1,"schedule":1},{"month":"2025-08","market":"Affinity","category":"CHART-VERADIGM","processed":3757,"paid":0,"submit":3756,"accept":3266,"reject":490,"batch":35,"schedule":35},{"month":"2025-08","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":2506,"paid":274768.35,"submit":2506,"accept":2506,"reject":0,"batch":4,"schedule":4},{"month":"2025-08","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":234,"paid":0,"submit":234,"accept":234,"reject":0,"batch":1,"schedule":1},{"month":"2025-08","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":48,"paid":5797.43,"submit":48,"accept":47,"reject":1,"batch":4,"schedule":4},{"month":"2025-08","market":"Affinity","category":"Medical-Regular","processed":12187,"paid":4672601.21,"submit":11394,"accept":10953,"reject":441,"batch":4,"schedule":2},{"month":"2025-08","market":"Affinity","category":"Medical-Remediation","processed":339,"paid":57941.21,"submit":232,"accept":153,"reject":79,"batch":2,"schedule":2},{"month":"2025-08","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":3,"paid":0,"submit":3,"accept":3,"reject":0,"batch":1,"schedule":1},{"month":"2025-08","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":76,"paid":15250.45,"submit":76,"accept":76,"reject":0,"batch":4,"schedule":4},{"month":"2025-08","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":80,"paid":0,"submit":80,"accept":79,"reject":1,"batch":1,"schedule":1},{"month":"2025-08","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":7,"paid":1468.8,"submit":7,"accept":6,"reject":1,"batch":3,"schedule":3},{"month":"2025-08","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":1,"paid":0,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2025-08","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2838,"paid":1035275.45,"submit":2657,"accept":2527,"reject":130,"batch":2,"schedule":2},{"month":"2025-08","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":446,"paid":45830.19,"submit":334,"accept":298,"reject":36,"batch":6,"schedule":6},{"month":"2025-08","market":"CCI Medicare","category":"CHART-VERADIGM","processed":1325,"paid":0,"submit":1325,"accept":1354,"reject":70,"batch":4,"schedule":4},{"month":"2025-08","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":5632,"paid":905085.16,"submit":5632,"accept":5632,"reject":0,"batch":4,"schedule":4},{"month":"2025-08","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":26276,"paid":0,"submit":26276,"accept":26267,"reject":9,"batch":6,"schedule":6},{"month":"2025-08","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1226,"paid":222972.85,"submit":1226,"accept":1184,"reject":42,"batch":4,"schedule":4},{"month":"2025-08","market":"CCI Medicare","category":"Medical-Regular","processed":130650,"paid":43235715.09,"submit":127334,"accept":125565,"reject":1769,"batch":27,"schedule":2},{"month":"2025-08","market":"CCI Medicare","category":"Medical-Remediation","processed":4368,"paid":1428131.76,"submit":4175,"accept":4033,"reject":142,"batch":7,"schedule":7},{"month":"2025-08","market":"CT APCD","category":"Medical-Regular","processed":1028614,"paid":339317504.83,"submit":917990,"accept":917990,"reject":0,"batch":515,"schedule":2},{"month":"2025-08","market":"PPO Medicare","category":"Medical-Regular","processed":89,"paid":19322.68,"submit":87,"accept":82,"reject":5,"batch":1,"schedule":1},{"month":"2025-09","market":"Affinity","category":"CHART-VERADIGM","processed":1334,"paid":0,"submit":1334,"accept":1262,"reject":72,"batch":38,"schedule":38},{"month":"2025-09","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":98,"paid":14360.67,"submit":98,"accept":98,"reject":0,"batch":5,"schedule":5},{"month":"2025-09","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":202,"paid":0,"submit":202,"accept":201,"reject":1,"batch":1,"schedule":1},{"month":"2025-09","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":59,"paid":8231.7,"submit":59,"accept":58,"reject":1,"batch":5,"schedule":5},{"month":"2025-09","market":"Affinity","category":"Medical-Regular","processed":11538,"paid":4848228.93,"submit":10708,"accept":9450,"reject":1258,"batch":4,"schedule":3},{"month":"2025-09","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":16,"paid":0,"submit":16,"accept":16,"reject":0,"batch":5,"schedule":5},{"month":"2025-09","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":76,"paid":19213.67,"submit":76,"accept":76,"reject":0,"batch":5,"schedule":5},{"month":"2025-09","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":87,"paid":0,"submit":87,"accept":87,"reject":0,"batch":1,"schedule":1},{"month":"2025-09","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":24,"paid":4675.9,"submit":24,"accept":23,"reject":1,"batch":5,"schedule":5},{"month":"2025-09","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2861,"paid":934218.54,"submit":2693,"accept":2625,"reject":68,"batch":2,"schedule":2},{"month":"2025-09","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":50,"paid":5123.28,"submit":50,"accept":44,"reject":6,"batch":2,"schedule":2},{"month":"2025-09","market":"CCI Medicare","category":"CHART-VERADIGM","processed":2240,"paid":0,"submit":2240,"accept":2223,"reject":17,"batch":8,"schedule":8},{"month":"2025-09","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":7389,"paid":1138240.86,"submit":7389,"accept":7389,"reject":0,"batch":5,"schedule":5},{"month":"2025-09","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":27649,"paid":0,"submit":27649,"accept":27636,"reject":13,"batch":6,"schedule":6},{"month":"2025-09","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1587,"paid":278017.34,"submit":1587,"accept":1537,"reject":50,"batch":5,"schedule":5},{"month":"2025-09","market":"CCI Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":108898,"paid":5586422.25,"submit":108898,"accept":108182,"reject":716,"batch":22,"schedule":2},{"month":"2025-09","market":"CCI Medicare","category":"Medical-Regular","processed":131697,"paid":43982305.34,"submit":127776,"accept":126061,"reject":1715,"batch":28,"schedule":2},{"month":"2025-09","market":"CCI Medicare","category":"Medical-Remediation","processed":30,"paid":27682,"submit":27,"accept":23,"reject":4,"batch":3,"schedule":3},{"month":"2025-09","market":"CT APCD","category":"Medical-Regular","processed":461750,"paid":161996612.17,"submit":412939,"accept":412939,"reject":0,"batch":231,"schedule":1},{"month":"2025-09","market":"PPO Medicare","category":"Medical-Regular","processed":60,"paid":31218.55,"submit":54,"accept":53,"reject":1,"batch":1,"schedule":1},{"month":"2025-10","market":"Affinity","category":"CHART-HCP","processed":5,"paid":0,"submit":5,"accept":5,"reject":0,"batch":1,"schedule":1},{"month":"2025-10","market":"Affinity","category":"CHART-VERADIGM","processed":5172,"paid":0,"submit":5163,"accept":3871,"reject":1292,"batch":41,"schedule":41},{"month":"2025-10","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":23,"paid":1854.35,"submit":23,"accept":23,"reject":0,"batch":5,"schedule":5},{"month":"2025-10","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":239,"paid":0,"submit":239,"accept":239,"reject":0,"batch":1,"schedule":1},{"month":"2025-10","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":59,"paid":7716.44,"submit":59,"accept":57,"reject":2,"batch":4,"schedule":4},{"month":"2025-10","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":6822,"paid":274809.54,"submit":6822,"accept":6807,"reject":15,"batch":2,"schedule":1},{"month":"2025-10","market":"Affinity","category":"Medical-Regular","processed":10382,"paid":3146842.3,"submit":9585,"accept":9318,"reject":267,"batch":4,"schedule":2},{"month":"2025-10","market":"Affinity","category":"Medical-Remediation","processed":10,"paid":206.39,"submit":6,"accept":6,"reject":0,"batch":1,"schedule":1},{"month":"2025-10","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":35,"paid":0,"submit":35,"accept":33,"reject":2,"batch":5,"schedule":5},{"month":"2025-10","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":95,"paid":24078,"submit":95,"accept":95,"reject":0,"batch":5,"schedule":5},{"month":"2025-10","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":78,"paid":0,"submit":78,"accept":78,"reject":0,"batch":1,"schedule":1},{"month":"2025-10","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":13,"paid":2723,"submit":13,"accept":12,"reject":1,"batch":5,"schedule":5},{"month":"2025-10","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":1896,"paid":94981.55,"submit":1896,"accept":1894,"reject":2,"batch":1,"schedule":1},{"month":"2025-10","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2781,"paid":988406.03,"submit":2661,"accept":2569,"reject":92,"batch":2,"schedule":2},{"month":"2025-10","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":104,"paid":7930.47,"submit":102,"accept":92,"reject":10,"batch":2,"schedule":2},{"month":"2025-10","market":"CCI Medicare","category":"CHART-VERADIGM","processed":2706,"paid":0,"submit":2706,"accept":2673,"reject":33,"batch":14,"schedule":14},{"month":"2025-10","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":7613,"paid":1194556.68,"submit":7613,"accept":7613,"reject":0,"batch":5,"schedule":5},{"month":"2025-10","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":26747,"paid":0,"submit":26747,"accept":26701,"reject":46,"batch":6,"schedule":6},{"month":"2025-10","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":2163,"paid":397289.43,"submit":2163,"accept":2094,"reject":69,"batch":5,"schedule":5},{"month":"2025-10","market":"CCI Medicare","category":"Medical-Regular","processed":141283,"paid":45028271.45,"submit":137432,"accept":135456,"reject":1976,"batch":29,"schedule":2},{"month":"2025-10","market":"CCI Medicare","category":"Medical-Remediation","processed":1317,"paid":110592.26,"submit":1275,"accept":1239,"reject":36,"batch":4,"schedule":4},{"month":"2025-10","market":"CT APCD","category":"Medical-Regular","processed":502541,"paid":174516267.22,"submit":451001,"accept":451001,"reject":0,"batch":252,"schedule":1},{"month":"2025-10","market":"Medicaid","category":"Medical-Remediation","processed":78990,"paid":8678363.72,"submit":0,"accept":20877,"reject":6700,"batch":3,"schedule":2},{"month":"2025-10","market":"PPO Medicare","category":"Medical-Regular","processed":77,"paid":34858.29,"submit":69,"accept":69,"reject":0,"batch":1,"schedule":1},{"month":"2025-11","market":"Affinity","category":"CHART-HCP","processed":3,"paid":0,"submit":0,"accept":0,"reject":0,"batch":2,"schedule":2},{"month":"2025-11","market":"Affinity","category":"CHART-VERADIGM","processed":1099,"paid":0,"submit":1011,"accept":913,"reject":98,"batch":38,"schedule":38},{"month":"2025-11","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":242,"paid":42247.54,"submit":242,"accept":242,"reject":0,"batch":3,"schedule":3},{"month":"2025-11","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":182,"paid":0,"submit":182,"accept":182,"reject":0,"batch":1,"schedule":1},{"month":"2025-11","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":43,"paid":6514.48,"submit":43,"accept":40,"reject":3,"batch":4,"schedule":4},{"month":"2025-11","market":"Affinity","category":"Medical-Regular","processed":10286,"paid":3235488.2,"submit":9516,"accept":9318,"reject":198,"batch":3,"schedule":2},{"month":"2025-11","market":"Affinity","category":"Medical-Remediation","processed":10,"paid":896.53,"submit":10,"accept":10,"reject":0,"batch":1,"schedule":1},{"month":"2025-11","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":3654,"paid":0,"submit":3653,"accept":3178,"reject":475,"batch":69,"schedule":69},{"month":"2025-11","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":72,"paid":14435.1,"submit":72,"accept":72,"reject":0,"batch":4,"schedule":4},{"month":"2025-11","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":83,"paid":0,"submit":83,"accept":83,"reject":0,"batch":1,"schedule":1},{"month":"2025-11","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":13,"paid":2528.6,"submit":13,"accept":13,"reject":0,"batch":4,"schedule":4},{"month":"2025-11","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2509,"paid":771765.05,"submit":2362,"accept":2291,"reject":71,"batch":2,"schedule":2},{"month":"2025-11","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":23,"paid":1405.26,"submit":17,"accept":17,"reject":0,"batch":2,"schedule":2},{"month":"2025-11","market":"CCI Medicare","category":"CHART-VERADIGM","processed":116652,"paid":0,"submit":116454,"accept":97232,"reject":19222,"batch":156,"schedule":156},{"month":"2025-11","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":6630,"paid":1097792.8,"submit":6630,"accept":6630,"reject":0,"batch":4,"schedule":4},{"month":"2025-11","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":26916,"paid":0,"submit":26916,"accept":26860,"reject":56,"batch":6,"schedule":6},{"month":"2025-11","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1941,"paid":360953.23,"submit":1941,"accept":1898,"reject":43,"batch":4,"schedule":4},{"month":"2025-11","market":"CCI Medicare","category":"Medical-Regular","processed":141122,"paid":45211952.44,"submit":137070,"accept":135202,"reject":1868,"batch":29,"schedule":2},{"month":"2025-11","market":"CCI Medicare","category":"Medical-Remediation","processed":211,"paid":14478.76,"submit":207,"accept":204,"reject":3,"batch":1,"schedule":1},{"month":"2025-11","market":"CT APCD","category":"Medical-Regular","processed":629306,"paid":188839654.61,"submit":563917,"accept":563917,"reject":0,"batch":315,"schedule":1},{"month":"2025-11","market":"PPO Medicare","category":"Medical-Regular","processed":87,"paid":31484.75,"submit":83,"accept":81,"reject":2,"batch":1,"schedule":1},{"month":"2025-12","market":"Affinity","category":"CHART-VERADIGM","processed":3135,"paid":0,"submit":3075,"accept":2820,"reject":255,"batch":41,"schedule":41},{"month":"2025-12","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":23,"paid":2462.45,"submit":23,"accept":23,"reject":0,"batch":3,"schedule":3},{"month":"2025-12","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":57,"paid":7474.96,"submit":57,"accept":56,"reject":1,"batch":5,"schedule":5},{"month":"2025-12","market":"Affinity","category":"Medical-Regular","processed":11701,"paid":3619289.61,"submit":10799,"accept":10591,"reject":208,"batch":3,"schedule":2},{"month":"2025-12","market":"Affinity","category":"Medical-Remediation","processed":6,"paid":211.2,"submit":5,"accept":4,"reject":1,"batch":1,"schedule":1},{"month":"2025-12","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":562,"paid":0,"submit":560,"accept":482,"reject":78,"batch":39,"schedule":39},{"month":"2025-12","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":39,"paid":10721.65,"submit":39,"accept":39,"reject":0,"batch":4,"schedule":4},{"month":"2025-12","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":10,"paid":2717.47,"submit":10,"accept":10,"reject":0,"batch":5,"schedule":5},{"month":"2025-12","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2706,"paid":820690.81,"submit":2507,"accept":2405,"reject":102,"batch":2,"schedule":2},{"month":"2025-12","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":51,"paid":5022.23,"submit":51,"accept":46,"reject":5,"batch":1,"schedule":1},{"month":"2025-12","market":"CCI Medicare","category":"CHART-VERADIGM","processed":17412,"paid":0,"submit":17398,"accept":15358,"reject":2040,"batch":77,"schedule":77},{"month":"2025-12","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":5567,"paid":969465.8,"submit":5567,"accept":5567,"reject":0,"batch":4,"schedule":4},{"month":"2025-12","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":2621,"paid":500216.25,"submit":2621,"accept":2582,"reject":39,"batch":5,"schedule":5},{"month":"2025-12","market":"CCI Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":51850,"paid":2714796.75,"submit":51850,"accept":48329,"reject":3521,"batch":11,"schedule":1},{"month":"2025-12","market":"CCI Medicare","category":"Medical-Regular","processed":136970,"paid":45729827.9,"submit":133332,"accept":132031,"reject":1301,"batch":29,"schedule":2},{"month":"2025-12","market":"CCI Medicare","category":"Medical-Remediation","processed":507,"paid":127921.75,"submit":500,"accept":494,"reject":6,"batch":2,"schedule":2},{"month":"2025-12","market":"CT APCD","category":"Medical-Regular","processed":560947,"paid":174202296.82,"submit":505048,"accept":505048,"reject":0,"batch":281,"schedule":1},{"month":"2025-12","market":"Medicaid","category":"Medical-Remediation","processed":8,"paid":2123.93,"submit":8,"accept":4,"reject":4,"batch":1,"schedule":1},{"month":"2025-12","market":"PPO Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":2,"paid":35,"submit":2,"accept":2,"reject":0,"batch":2,"schedule":2},{"month":"2025-12","market":"PPO Medicare","category":"Medical-Regular","processed":89,"paid":158691.5,"submit":87,"accept":83,"reject":4,"batch":1,"schedule":1},{"month":"2026-01","market":"Affinity","category":"CHART-VERADIGM","processed":1989,"paid":0,"submit":1985,"accept":1824,"reject":161,"batch":42,"schedule":42},{"month":"2026-01","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":387,"paid":66290.62,"submit":387,"accept":387,"reject":0,"batch":7,"schedule":7},{"month":"2026-01","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":207,"paid":0,"submit":207,"accept":201,"reject":6,"batch":1,"schedule":1},{"month":"2026-01","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":35,"paid":4096.28,"submit":35,"accept":34,"reject":1,"batch":4,"schedule":4},{"month":"2026-01","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":7131,"paid":285162.34,"submit":7131,"accept":7108,"reject":23,"batch":2,"schedule":1},{"month":"2026-01","market":"Affinity","category":"Medical-Regular","processed":17014,"paid":5342079.46,"submit":15856,"accept":15512,"reject":344,"batch":6,"schedule":3},{"month":"2026-01","market":"Affinity","category":"Medical-Remediation","processed":10489,"paid":954216.73,"submit":1298,"accept":675,"reject":623,"batch":12,"schedule":11},{"month":"2026-01","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":698,"paid":0,"submit":696,"accept":546,"reject":150,"batch":44,"schedule":44},{"month":"2026-01","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":40,"paid":4612.45,"submit":40,"accept":40,"reject":0,"batch":6,"schedule":6},{"month":"2026-01","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":82,"paid":0,"submit":82,"accept":82,"reject":0,"batch":1,"schedule":1},{"month":"2026-01","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":7,"paid":1231.8,"submit":7,"accept":7,"reject":0,"batch":3,"schedule":3},{"month":"2026-01","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":1734,"paid":88464.62,"submit":1734,"accept":1728,"reject":6,"batch":1,"schedule":1},{"month":"2026-01","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":2866,"paid":826953.34,"submit":2629,"accept":2534,"reject":95,"batch":3,"schedule":3},{"month":"2026-01","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":3618,"paid":76539.31,"submit":339,"accept":312,"reject":27,"batch":7,"schedule":7},{"month":"2026-01","market":"CCI Medicare","category":"CHART-VERADIGM","processed":30684,"paid":0,"submit":30209,"accept":21645,"reject":8564,"batch":117,"schedule":117},{"month":"2026-01","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":1678,"paid":291618.04,"submit":1678,"accept":1678,"reject":0,"batch":4,"schedule":4},{"month":"2026-01","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":27237,"paid":0,"submit":27237,"accept":27206,"reject":31,"batch":6,"schedule":6},{"month":"2026-01","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":869,"paid":171153.7,"submit":869,"accept":849,"reject":20,"batch":4,"schedule":4},{"month":"2026-01","market":"CCI Medicare","category":"Medical-Regular","processed":121854,"paid":45373657.16,"submit":118359,"accept":116349,"reject":2010,"batch":26,"schedule":3},{"month":"2026-01","market":"CCI Medicare","category":"Medical-Remediation","processed":15847,"paid":3131286.58,"submit":6893,"accept":5682,"reject":745,"batch":9,"schedule":8},{"month":"2026-01","market":"CT APCD","category":"Medical-Regular","processed":604847,"paid":225057009.51,"submit":586814,"accept":586814,"reject":0,"batch":303,"schedule":1},{"month":"2026-01","market":"PPO Medicare","category":"Medical-Regular","processed":197,"paid":90125.91,"submit":183,"accept":178,"reject":5,"batch":2,"schedule":2},{"month":"2026-01","market":"PPO Medicare","category":"Medical-Remediation","processed":47,"paid":4986.07,"submit":39,"accept":37,"reject":2,"batch":4,"schedule":4},{"month":"2026-02","market":"Affinity","category":"CHART-VERADIGM","processed":47,"paid":0,"submit":47,"accept":47,"reject":0,"batch":3,"schedule":3},{"month":"2026-02","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":92,"paid":15915.72,"submit":92,"accept":92,"reject":0,"batch":5,"schedule":5},{"month":"2026-02","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":223,"paid":0,"submit":223,"accept":223,"reject":0,"batch":1,"schedule":1},{"month":"2026-02","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":22,"paid":2730.35,"submit":22,"accept":22,"reject":0,"batch":4,"schedule":4},{"month":"2026-02","market":"Affinity","category":"Medical-Regular","processed":6003,"paid":2398502.24,"submit":5573,"accept":5427,"reject":146,"batch":2,"schedule":1},{"month":"2026-02","market":"Affinity","category":"Medical-Remediation","processed":309,"paid":11114.75,"submit":98,"accept":98,"reject":0,"batch":2,"schedule":2},{"month":"2026-02","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":3,"paid":0,"submit":3,"accept":3,"reject":0,"batch":2,"schedule":2},{"month":"2026-02","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":23,"paid":3064.45,"submit":23,"accept":23,"reject":0,"batch":4,"schedule":4},{"month":"2026-02","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":76,"paid":0,"submit":76,"accept":76,"reject":0,"batch":1,"schedule":1},{"month":"2026-02","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":3,"paid":650,"submit":3,"accept":3,"reject":0,"batch":2,"schedule":2},{"month":"2026-02","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":378,"paid":306804.35,"submit":310,"accept":295,"reject":15,"batch":1,"schedule":1},{"month":"2026-02","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":17,"paid":21801.35,"submit":14,"accept":14,"reject":0,"batch":2,"schedule":2},{"month":"2026-02","market":"CCI Medicare","category":"CHART-VERADIGM","processed":512,"paid":0,"submit":510,"accept":504,"reject":6,"batch":7,"schedule":7},{"month":"2026-02","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":667,"paid":121673.66,"submit":667,"accept":667,"reject":0,"batch":4,"schedule":4},{"month":"2026-02","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":26963,"paid":0,"submit":26963,"accept":26944,"reject":19,"batch":6,"schedule":6},{"month":"2026-02","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":107,"paid":14093.91,"submit":107,"accept":101,"reject":6,"batch":4,"schedule":4},{"month":"2026-02","market":"CCI Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":17780,"paid":939537,"submit":870,"accept":870,"reject":0,"batch":6,"schedule":3},{"month":"2026-02","market":"CCI Medicare","category":"Medical-Regular","processed":11417,"paid":14288254.79,"submit":9840,"accept":9186,"reject":654,"batch":3,"schedule":1},{"month":"2026-02","market":"CCI Medicare","category":"Medical-Remediation","processed":464,"paid":273427.95,"submit":403,"accept":393,"reject":10,"batch":4,"schedule":4},{"month":"2026-02","market":"Medicaid","category":"Medical-Remediation","processed":2164,"paid":152700.49,"submit":1790,"accept":1788,"reject":2,"batch":1,"schedule":1},{"month":"2026-03","market":"Affinity","category":"CHART-VERADIGM","processed":111,"paid":0,"submit":109,"accept":99,"reject":8,"batch":18,"schedule":18},{"month":"2026-03","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Dental","processed":176,"paid":23862.25,"submit":176,"accept":176,"reject":0,"batch":8,"schedule":8},{"month":"2026-03","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Tivity","processed":187,"paid":0,"submit":187,"accept":165,"reject":22,"batch":1,"schedule":1},{"month":"2026-03","market":"Affinity","category":"CMS-SUPP-PASS-VEND-Vision","processed":48,"paid":4934.47,"submit":48,"accept":48,"reject":0,"batch":5,"schedule":5},{"month":"2026-03","market":"Affinity","category":"CMS-SUPP-TEMP-VEND-Optum","processed":21,"paid":0,"submit":21,"accept":21,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"Affinity","category":"Medical-Regular","processed":10052,"paid":3703986.52,"submit":9206,"accept":8933,"reject":273,"batch":3,"schedule":2},{"month":"2026-03","market":"Affinity","category":"Medical-Remediation","processed":11,"paid":28.34,"submit":11,"accept":11,"reject":0,"batch":2,"schedule":2},{"month":"2026-03","market":"CCI DSNP Medicare","category":"CHART-VERADIGM","processed":43,"paid":0,"submit":35,"accept":28,"reject":7,"batch":14,"schedule":14},{"month":"2026-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":24,"paid":2967,"submit":24,"accept":24,"reject":0,"batch":4,"schedule":4},{"month":"2026-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1,"paid":0,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"CCI DSNP Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":2,"paid":0,"submit":2,"accept":2,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"CCI DSNP Medicare","category":"Medical-Regular","processed":431,"paid":147571.28,"submit":233,"accept":206,"reject":27,"batch":2,"schedule":2},{"month":"2026-03","market":"CCI DSNP Medicare","category":"Medical-Remediation","processed":9,"paid":1978.24,"submit":7,"accept":7,"reject":0,"batch":2,"schedule":2},{"month":"2026-03","market":"CCI Medicare","category":"CHART-VERADIGM","processed":1171,"paid":0,"submit":873,"accept":685,"reject":188,"batch":21,"schedule":21},{"month":"2026-03","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":294,"paid":34748.6,"submit":294,"accept":294,"reject":0,"batch":4,"schedule":4},{"month":"2026-03","market":"CCI Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":65,"paid":3922.59,"submit":65,"accept":56,"reject":9,"batch":5,"schedule":5},{"month":"2026-03","market":"CCI Medicare","category":"Medical-Regular","processed":10755,"paid":5861844.31,"submit":9180,"accept":7966,"reject":1214,"batch":3,"schedule":2},{"month":"2026-03","market":"CCI Medicare","category":"Medical-Remediation","processed":65,"paid":6601.91,"submit":61,"accept":56,"reject":5,"batch":2,"schedule":2},{"month":"2026-03","market":"PPO Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":1,"paid":80,"submit":1,"accept":1,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"PPO Medicare","category":"Medical-Regular","processed":83,"paid":13145.9,"submit":78,"accept":78,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"PPO Medicare","category":"Medical-Remediation","processed":4,"paid":130.03,"submit":0,"accept":0,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"Medicaid","category":"CHART-VERADIGM","processed":16,"paid":115428.19,"submit":15,"accept":15,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"Medicaid","category":"Medical-Regular","processed":770185,"paid":111394674.28,"submit":583408,"accept":578585,"reject":4823,"batch":19,"schedule":5},{"month":"2025-03","market":"Medicaid","category":"Medical-Remediation","processed":3481023,"paid":431772310.76,"submit":2096820,"accept":2086306,"reject":10514,"batch":100,"schedule":21},{"month":"2025-03","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":169148,"paid":77512981.92,"submit":156724,"accept":154090,"reject":2634,"batch":87,"schedule":87},{"month":"2025-03","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":5959,"paid":382206.32,"submit":3431,"accept":3332,"reject":99,"batch":12,"schedule":12},{"month":"2025-03","market":"Medicare","category":"CHART-HCP","processed":2,"paid":0,"submit":2,"accept":2,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":3662,"paid":407884.46,"submit":3662,"accept":3662,"reject":0,"batch":1,"schedule":1},{"month":"2025-03","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":4638,"paid":387063.26,"submit":4638,"accept":4326,"reject":312,"batch":5,"schedule":5},{"month":"2025-03","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Nations","processed":316,"paid":32929,"submit":316,"accept":310,"reject":6,"batch":1,"schedule":1},{"month":"2025-03","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":218,"paid":0,"submit":218,"accept":216,"reject":2,"batch":2,"schedule":2},{"month":"2025-03","market":"Medicare","category":"Medical-Regular","processed":183671,"paid":82361114.88,"submit":170310,"accept":166954,"reject":3356,"batch":12,"schedule":6},{"month":"2025-03","market":"Medicare","category":"Medical-Remediation","processed":122,"paid":31668.56,"submit":85,"accept":59,"reject":26,"batch":2,"schedule":2},{"month":"2025-04","market":"Medicaid","category":"CHART-VERADIGM","processed":32790,"paid":39566864.69,"submit":32120,"accept":30956,"reject":1164,"batch":68,"schedule":68},{"month":"2025-04","market":"Medicaid","category":"Medical-Regular","processed":1107878,"paid":147374782.42,"submit":837350,"accept":828996,"reject":8354,"batch":25,"schedule":5},{"month":"2025-04","market":"Medicaid","category":"Medical-Remediation","processed":11454339,"paid":1744771431.04,"submit":7057687,"accept":6847664,"reject":120548,"batch":283,"schedule":17},{"month":"2025-04","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":146655,"paid":66800677.54,"submit":134751,"accept":131965,"reject":2296,"batch":87,"schedule":87},{"month":"2025-04","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":6097,"paid":374767.28,"submit":3514,"accept":3777,"reject":103,"batch":12,"schedule":12},{"month":"2025-04","market":"Medicare","category":"CHART-VERADIGM","processed":1146,"paid":0,"submit":1144,"accept":1136,"reject":8,"batch":9,"schedule":9},{"month":"2025-04","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":106757,"paid":0,"submit":106757,"accept":106583,"reject":174,"batch":27,"schedule":27},{"month":"2025-04","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":614,"paid":40263.02,"submit":614,"accept":596,"reject":18,"batch":4,"schedule":4},{"month":"2025-04","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":64,"paid":0,"submit":64,"accept":64,"reject":0,"batch":3,"schedule":3},{"month":"2025-04","market":"Medicare","category":"Medical-Regular","processed":96323,"paid":50209195.11,"submit":90776,"accept":89199,"reject":1577,"batch":6,"schedule":2},{"month":"2025-05","market":"Medicaid","category":"CHART-VERADIGM","processed":30183,"paid":18535789.45,"submit":28128,"accept":26959,"reject":1169,"batch":60,"schedule":60},{"month":"2025-05","market":"Medicaid","category":"Medical-Regular","processed":1031893,"paid":129600946.17,"submit":778563,"accept":760873,"reject":17690,"batch":29,"schedule":4},{"month":"2025-05","market":"Medicaid","category":"Medical-Remediation","processed":5327186,"paid":895546514.11,"submit":2697679,"accept":2604936,"reject":8539,"batch":141,"schedule":31},{"month":"2025-05","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":152365,"paid":71659861.6,"submit":140236,"accept":137843,"reject":2392,"batch":88,"schedule":88},{"month":"2025-05","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":6915,"paid":463726.51,"submit":4024,"accept":3918,"reject":106,"batch":15,"schedule":15},{"month":"2025-05","market":"Medicare","category":"CHART-HCP","processed":4,"paid":0,"submit":4,"accept":4,"reject":0,"batch":1,"schedule":1},{"month":"2025-05","market":"Medicare","category":"CHART-VERADIGM","processed":1112,"paid":0,"submit":1112,"accept":1071,"reject":41,"batch":4,"schedule":4},{"month":"2025-05","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":694,"paid":86045.79,"submit":694,"accept":694,"reject":0,"batch":2,"schedule":2},{"month":"2025-05","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":17978,"paid":0,"submit":17978,"accept":8980,"reject":8998,"batch":4,"schedule":4},{"month":"2025-05","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":589,"paid":35665.64,"submit":589,"accept":575,"reject":14,"batch":4,"schedule":4},{"month":"2025-05","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":36,"paid":0,"submit":36,"accept":36,"reject":0,"batch":1,"schedule":1},{"month":"2025-05","market":"Medicare","category":"Medical-Regular","processed":148844,"paid":57020880.28,"submit":125450,"accept":121435,"reject":4015,"batch":8,"schedule":2},{"month":"2025-05","market":"Medicare","category":"Medical-Remediation","processed":6419,"paid":3578021.62,"submit":3361,"accept":1114,"reject":2247,"batch":2,"schedule":2},{"month":"2025-06","market":"Medicaid","category":"CHART-VERADIGM","processed":44557,"paid":46181865.17,"submit":43665,"accept":38979,"reject":4686,"batch":124,"schedule":124},{"month":"2025-06","market":"Medicaid","category":"Medical-Regular","processed":1635564,"paid":153235212.82,"submit":1178901,"accept":1165247,"reject":13654,"batch":36,"schedule":5},{"month":"2025-06","market":"Medicaid","category":"Medical-Remediation","processed":1685085,"paid":415162378.23,"submit":517731,"accept":483815,"reject":634,"batch":54,"schedule":16},{"month":"2025-06","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":387130,"paid":5145382.74,"submit":380942,"accept":360555,"reject":20386,"batch":100,"schedule":100},{"month":"2025-06","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":5358,"paid":348166.89,"submit":3707,"accept":3569,"reject":138,"batch":12,"schedule":12},{"month":"2025-06","market":"Medicare","category":"CHART-HCP","processed":225,"paid":0,"submit":225,"accept":222,"reject":3,"batch":2,"schedule":2},{"month":"2025-06","market":"Medicare","category":"CHART-VERADIGM","processed":34948,"paid":0,"submit":28082,"accept":25540,"reject":2542,"batch":35,"schedule":35},{"month":"2025-06","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":293,"paid":36737.56,"submit":293,"accept":293,"reject":0,"batch":5,"schedule":5},{"month":"2025-06","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8556,"paid":0,"submit":8556,"accept":8556,"reject":0,"batch":2,"schedule":2},{"month":"2025-06","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":528,"paid":33504.22,"submit":528,"accept":509,"reject":19,"batch":4,"schedule":4},{"month":"2025-06","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":30,"paid":0,"submit":30,"accept":30,"reject":0,"batch":1,"schedule":1},{"month":"2025-06","market":"Medicare","category":"Medical-Regular","processed":158471,"paid":67193928.77,"submit":149520,"accept":147468,"reject":2052,"batch":9,"schedule":2},{"month":"2025-07","market":"Medicaid","category":"CHART-VERADIGM","processed":6352,"paid":2575614.74,"submit":6161,"accept":5388,"reject":773,"batch":8,"schedule":8},{"month":"2025-07","market":"Medicaid","category":"Medical-Regular","processed":880766,"paid":114495682.86,"submit":681658,"accept":675255,"reject":6403,"batch":20,"schedule":4},{"month":"2025-07","market":"Medicaid","category":"Medical-Remediation","processed":2052131,"paid":336907551.58,"submit":1395214,"accept":1345610,"reject":49604,"batch":62,"schedule":21},{"month":"2025-07","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":789096,"paid":53419217.82,"submit":604881,"accept":584503,"reject":20367,"batch":156,"schedule":156},{"month":"2025-07","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":6190,"paid":373647.12,"submit":6160,"accept":5812,"reject":348,"batch":10,"schedule":10},{"month":"2025-07","market":"Medicaid SCN","category":"OSDS-SCN","processed":813,"paid":39056.52,"submit":811,"accept":793,"reject":18,"batch":16,"schedule":16},{"month":"2025-07","market":"Medicare","category":"CHART-HCP","processed":886,"paid":0,"submit":886,"accept":868,"reject":18,"batch":2,"schedule":2},{"month":"2025-07","market":"Medicare","category":"CHART-VERADIGM","processed":8826,"paid":0,"submit":8753,"accept":8114,"reject":639,"batch":21,"schedule":21},{"month":"2025-07","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":165,"paid":29503.04,"submit":165,"accept":165,"reject":0,"batch":4,"schedule":4},{"month":"2025-07","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8880,"paid":0,"submit":8880,"accept":8876,"reject":4,"batch":2,"schedule":2},{"month":"2025-07","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":631,"paid":36546.43,"submit":631,"accept":618,"reject":13,"batch":5,"schedule":5},{"month":"2025-07","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":28,"paid":0,"submit":28,"accept":28,"reject":0,"batch":1,"schedule":1},{"month":"2025-07","market":"Medicare","category":"Medical-Regular","processed":150373,"paid":75141900.76,"submit":142269,"accept":140041,"reject":2228,"batch":8,"schedule":2},{"month":"2025-07","market":"Medicare","category":"Medical-Remediation","processed":6752,"paid":962540.71,"submit":6573,"accept":6267,"reject":306,"batch":2,"schedule":2},{"month":"2025-08","market":"Medicaid","category":"Medical-Regular","processed":967808,"paid":108219635.28,"submit":742446,"accept":735514,"reject":6932,"batch":23,"schedule":4},{"month":"2025-08","market":"Medicaid","category":"Medical-Remediation","processed":2940110,"paid":502720793.73,"submit":2374482,"accept":2244917,"reject":129565,"batch":83,"schedule":23},{"month":"2025-08","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":528723,"paid":164586761.9,"submit":518365,"accept":513834,"reject":4520,"batch":120,"schedule":120},{"month":"2025-08","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":5776,"paid":374950.97,"submit":5704,"accept":5317,"reject":387,"batch":12,"schedule":12},{"month":"2025-08","market":"Medicaid SCN","category":"OSDS-SCN","processed":696,"paid":18850.83,"submit":686,"accept":684,"reject":2,"batch":9,"schedule":9},{"month":"2025-08","market":"Medicare","category":"CHART-HCP","processed":145,"paid":0,"submit":145,"accept":142,"reject":3,"batch":2,"schedule":2},{"month":"2025-08","market":"Medicare","category":"CHART-VERADIGM","processed":82955,"paid":0,"submit":82902,"accept":77422,"reject":5480,"batch":70,"schedule":70},{"month":"2025-08","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":225,"paid":32242.36,"submit":225,"accept":225,"reject":0,"batch":4,"schedule":4},{"month":"2025-08","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8034,"paid":0,"submit":8034,"accept":7999,"reject":35,"batch":2,"schedule":2},{"month":"2025-08","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":466,"paid":30576.47,"submit":466,"accept":454,"reject":12,"batch":4,"schedule":4},{"month":"2025-08","market":"Medicare","category":"Medical-Regular","processed":132711,"paid":54471700.85,"submit":125988,"accept":123712,"reject":2276,"batch":8,"schedule":2},{"month":"2025-08","market":"Medicare","category":"Medical-Remediation","processed":43256,"paid":19957051.02,"submit":39,"accept":88022,"reject":18321,"batch":5,"schedule":3},{"month":"2025-09","market":"Medicaid","category":"CHART-VERADIGM","processed":6580,"paid":617743.95,"submit":6312,"accept":6299,"reject":13,"batch":46,"schedule":46},{"month":"2025-09","market":"Medicaid","category":"Medical-Regular","processed":878724,"paid":112976313.26,"submit":693570,"accept":650860,"reject":42710,"batch":20,"schedule":4},{"month":"2025-09","market":"Medicaid","category":"Medical-Remediation","processed":3738474,"paid":557357373.64,"submit":2859381,"accept":2942663,"reject":13307,"batch":101,"schedule":23},{"month":"2025-09","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":170011,"paid":79849200.1,"submit":169616,"accept":165831,"reject":3752,"batch":93,"schedule":93},{"month":"2025-09","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":6906,"paid":439618.2,"submit":5805,"accept":5405,"reject":400,"batch":13,"schedule":13},{"month":"2025-09","market":"Medicaid SCN","category":"OSDS-SCN","processed":4338,"paid":103884,"submit":4334,"accept":4301,"reject":33,"batch":11,"schedule":11},{"month":"2025-09","market":"Medicare","category":"CHART-HCP","processed":267,"paid":0,"submit":267,"accept":262,"reject":5,"batch":4,"schedule":4},{"month":"2025-09","market":"Medicare","category":"CHART-VERADIGM","processed":16531,"paid":0,"submit":16530,"accept":15177,"reject":1353,"batch":56,"schedule":56},{"month":"2025-09","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":124,"paid":21270.52,"submit":124,"accept":124,"reject":0,"batch":5,"schedule":5},{"month":"2025-09","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8585,"paid":0,"submit":8585,"accept":8575,"reject":10,"batch":2,"schedule":2},{"month":"2025-09","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":705,"paid":42193.85,"submit":705,"accept":654,"reject":51,"batch":5,"schedule":5},{"month":"2025-09","market":"Medicare","category":"Medical-Regular","processed":125383,"paid":54649448.71,"submit":119662,"accept":117047,"reject":2615,"batch":8,"schedule":2},{"month":"2025-09","market":"Medicare","category":"Medical-Remediation","processed":1415,"paid":561532.41,"submit":1139,"accept":1089,"reject":50,"batch":1,"schedule":1},{"month":"2025-10","market":"Medicaid","category":"CHART-VERADIGM","processed":258,"paid":24737.33,"submit":238,"accept":223,"reject":15,"batch":7,"schedule":7},{"month":"2025-10","market":"Medicaid","category":"Medical-Regular","processed":1103520,"paid":134372728.42,"submit":857595,"accept":846872,"reject":10723,"batch":25,"schedule":5},{"month":"2025-10","market":"Medicaid","category":"Medical-Remediation","processed":5450286,"paid":381341546.55,"submit":4593156,"accept":4572949,"reject":20207,"batch":127,"schedule":18},{"month":"2025-10","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":158436,"paid":79396056.86,"submit":156479,"accept":152845,"reject":3531,"batch":89,"schedule":89},{"month":"2025-10","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":7315,"paid":449378.98,"submit":7081,"accept":6362,"reject":719,"batch":15,"schedule":15},{"month":"2025-10","market":"Medicaid SCN","category":"OSDS-SCN","processed":1067,"paid":54296.6,"submit":1067,"accept":1051,"reject":16,"batch":9,"schedule":9},{"month":"2025-10","market":"Medicare","category":"CHART-HCP","processed":582,"paid":0,"submit":259,"accept":256,"reject":3,"batch":8,"schedule":8},{"month":"2025-10","market":"Medicare","category":"CHART-VERADIGM","processed":67941,"paid":0,"submit":67739,"accept":51170,"reject":16569,"batch":66,"schedule":66},{"month":"2025-10","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":34,"paid":4852.45,"submit":34,"accept":34,"reject":0,"batch":5,"schedule":5},{"month":"2025-10","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8513,"paid":0,"submit":8513,"accept":8509,"reject":4,"batch":2,"schedule":2},{"month":"2025-10","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":494,"paid":27361.74,"submit":494,"accept":460,"reject":34,"batch":4,"schedule":4},{"month":"2025-10","market":"Medicare","category":"Medical-Regular","processed":129067,"paid":51523833.18,"submit":123238,"accept":120629,"reject":2609,"batch":8,"schedule":2},{"month":"2025-11","market":"Medicaid","category":"CHART-VERADIGM","processed":698,"paid":56376.24,"submit":686,"accept":686,"reject":0,"batch":10,"schedule":10},{"month":"2025-11","market":"Medicaid","category":"Medical-Regular","processed":1646569,"paid":315367669.8,"submit":1287971,"accept":1285492,"reject":12479,"batch":36,"schedule":4},{"month":"2025-11","market":"Medicaid","category":"Medical-Remediation","processed":524160,"paid":76979674.73,"submit":385089,"accept":384565,"reject":524,"batch":25,"schedule":16},{"month":"2025-11","market":"Medicaid","category":"OSDS-DENTAL-HLPX","processed":35226,"paid":5435985.45,"submit":0,"accept":34891,"reject":686,"batch":18,"schedule":18},{"month":"2025-11","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":141336,"paid":67028169.29,"submit":140500,"accept":137215,"reject":3159,"batch":73,"schedule":73},{"month":"2025-11","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":4901,"paid":351209.71,"submit":4826,"accept":4528,"reject":298,"batch":12,"schedule":12},{"month":"2025-11","market":"Medicaid SCN","category":"OSDS-SCN","processed":3097,"paid":169568.92,"submit":3097,"accept":3076,"reject":21,"batch":15,"schedule":15},{"month":"2025-11","market":"Medicare","category":"CHART-HCP","processed":1067,"paid":0,"submit":1002,"accept":961,"reject":41,"batch":4,"schedule":4},{"month":"2025-11","market":"Medicare","category":"CHART-VERADIGM","processed":13055,"paid":0,"submit":12113,"accept":10493,"reject":1620,"batch":52,"schedule":52},{"month":"2025-11","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":171,"paid":21709.06,"submit":171,"accept":171,"reject":0,"batch":5,"schedule":5},{"month":"2025-11","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8885,"paid":0,"submit":8885,"accept":8883,"reject":2,"batch":2,"schedule":2},{"month":"2025-11","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":419,"paid":43509.21,"submit":419,"accept":405,"reject":14,"batch":4,"schedule":4},{"month":"2025-11","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":2221,"paid":134923.54,"submit":2221,"accept":2220,"reject":1,"batch":1,"schedule":1},{"month":"2025-11","market":"Medicare","category":"Medical-Regular","processed":132774,"paid":51609789.22,"submit":126852,"accept":124562,"reject":2290,"batch":8,"schedule":2},{"month":"2025-11","market":"Medicare","category":"Medical-Remediation","processed":15186,"paid":5866270.69,"submit":14095,"accept":12844,"reject":1251,"batch":2,"schedule":2},{"month":"2025-12","market":"Medicaid","category":"CHART-VERADIGM","processed":1553,"paid":133676.01,"submit":1455,"accept":1443,"reject":12,"batch":8,"schedule":8},{"month":"2025-12","market":"Medicaid","category":"Medical-Regular","processed":1706075,"paid":194516386.57,"submit":1397910,"accept":1383860,"reject":9334,"batch":36,"schedule":5},{"month":"2025-12","market":"Medicaid","category":"Medical-Remediation","processed":1414557,"paid":161473886.98,"submit":1105104,"accept":1099208,"reject":5896,"batch":56,"schedule":26},{"month":"2025-12","market":"Medicaid","category":"OSDS-DENTAL-HLPX","processed":13910,"paid":2354810.79,"submit":0,"accept":13780,"reject":171,"batch":36,"schedule":36},{"month":"2025-12","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":195593,"paid":98120636.72,"submit":194309,"accept":175946,"reject":2024,"batch":103,"schedule":103},{"month":"2025-12","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":5787,"paid":390423.95,"submit":5511,"accept":5117,"reject":333,"batch":15,"schedule":15},{"month":"2025-12","market":"Medicaid SCN","category":"OSDS-SCN","processed":2962,"paid":87626.63,"submit":2962,"accept":2939,"reject":23,"batch":14,"schedule":14},{"month":"2025-12","market":"Medicare","category":"CHART-HCP","processed":1617,"paid":0,"submit":1617,"accept":1493,"reject":124,"batch":4,"schedule":4},{"month":"2025-12","market":"Medicare","category":"CHART-VERADIGM","processed":52480,"paid":0,"submit":52452,"accept":45878,"reject":6574,"batch":74,"schedule":74},{"month":"2025-12","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":753,"paid":111205.99,"submit":753,"accept":753,"reject":0,"batch":5,"schedule":5},{"month":"2025-12","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":452,"paid":39742.76,"submit":452,"accept":438,"reject":14,"batch":5,"schedule":5},{"month":"2025-12","market":"Medicare","category":"Medical-Regular","processed":139337,"paid":56960297.45,"submit":133766,"accept":131412,"reject":2354,"batch":8,"schedule":2},{"month":"2026-01","market":"Medicaid","category":"CHART-VERADIGM","processed":433,"paid":39297.54,"submit":422,"accept":421,"reject":1,"batch":6,"schedule":6},{"month":"2026-01","market":"Medicaid","category":"Medical-Regular","processed":1230101,"paid":172396462.49,"submit":1021138,"accept":1014539,"reject":6599,"batch":28,"schedule":4},{"month":"2026-01","market":"Medicaid","category":"Medical-Remediation","processed":14577,"paid":2077001.69,"submit":8566,"accept":8473,"reject":93,"batch":17,"schedule":17},{"month":"2026-01","market":"Medicaid","category":"OSDS-DENTAL-HLPX","processed":17062,"paid":2742383.4,"submit":0,"accept":16694,"reject":567,"batch":45,"schedule":45},{"month":"2026-01","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":128122,"paid":58238051.22,"submit":127553,"accept":115989,"reject":1466,"batch":74,"schedule":74},{"month":"2026-01","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":2168,"paid":150571.83,"submit":2121,"accept":1968,"reject":153,"batch":6,"schedule":6},{"month":"2026-01","market":"Medicaid SCN","category":"OSDS-SCN","processed":2215,"paid":105186.11,"submit":2215,"accept":2189,"reject":26,"batch":13,"schedule":13},{"month":"2026-01","market":"Medicare","category":"CHART-HCP","processed":1,"paid":0,"submit":1,"accept":0,"reject":1,"batch":1,"schedule":1},{"month":"2026-01","market":"Medicare","category":"CHART-VERADIGM","processed":25345,"paid":0,"submit":25269,"accept":22011,"reject":3258,"batch":82,"schedule":82},{"month":"2026-01","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":328,"paid":49629.66,"submit":328,"accept":328,"reject":0,"batch":10,"schedule":10},{"month":"2026-01","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":8157,"paid":0,"submit":8157,"accept":8152,"reject":5,"batch":2,"schedule":2},{"month":"2026-01","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":409,"paid":32114.63,"submit":409,"accept":392,"reject":17,"batch":4,"schedule":4},{"month":"2026-01","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Incomm","processed":2454,"paid":148335.34,"submit":2454,"accept":2442,"reject":12,"batch":1,"schedule":1},{"month":"2026-01","market":"Medicare","category":"Medical-Regular","processed":187575,"paid":81538275.85,"submit":179010,"accept":175533,"reject":3477,"batch":11,"schedule":3},{"month":"2026-01","market":"Medicare","category":"Medical-Remediation","processed":60628,"paid":24792643.08,"submit":10367,"accept":6108,"reject":4259,"batch":18,"schedule":16},{"month":"2026-02","market":"Medicaid","category":"CHART-VERADIGM","processed":1573,"paid":130806.36,"submit":1536,"accept":1510,"reject":26,"batch":21,"schedule":21},{"month":"2026-02","market":"Medicaid","category":"Medical-Regular","processed":1124752,"paid":176049214.81,"submit":912766,"accept":818482,"reject":78821,"batch":27,"schedule":3},{"month":"2026-02","market":"Medicaid","category":"Medical-Remediation","processed":136293,"paid":49426686.5,"submit":113118,"accept":111330,"reject":1788,"batch":22,"schedule":18},{"month":"2026-02","market":"Medicaid","category":"OSDS-DENTAL-HLPX","processed":13706,"paid":2302706.99,"submit":0,"accept":13480,"reject":235,"batch":43,"schedule":43},{"month":"2026-02","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":12338,"paid":-1440895.13,"submit":12295,"accept":10828,"reject":1392,"batch":36,"schedule":36},{"month":"2026-02","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":9316,"paid":723036.6,"submit":8743,"accept":7301,"reject":1442,"batch":33,"schedule":23},{"month":"2026-02","market":"Medicaid SCN","category":"OSDS-SCN","processed":3221,"paid":306812.02,"submit":1409,"accept":1384,"reject":25,"batch":8,"schedule":7},{"month":"2026-02","market":"Medicare","category":"CHART-HCP","processed":26,"paid":0,"submit":26,"accept":17,"reject":9,"batch":3,"schedule":3},{"month":"2026-02","market":"Medicare","category":"CHART-VERADIGM","processed":25,"paid":0,"submit":25,"accept":25,"reject":0,"batch":4,"schedule":4},{"month":"2026-02","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":172,"paid":23471,"submit":172,"accept":172,"reject":0,"batch":6,"schedule":6},{"month":"2026-02","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":7819,"paid":0,"submit":7819,"accept":7817,"reject":2,"batch":2,"schedule":2},{"month":"2026-02","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":433,"paid":23633.35,"submit":433,"accept":416,"reject":17,"batch":4,"schedule":4},{"month":"2026-02","market":"Medicare","category":"Medical-Regular","processed":70685,"paid":28576229.76,"submit":67153,"accept":66022,"reject":1131,"batch":4,"schedule":1},{"month":"2026-02","market":"Medicare","category":"Medical-Remediation","processed":109,"paid":3762202.69,"submit":73,"accept":66,"reject":7,"batch":4,"schedule":3},{"month":"2026-03","market":"Medicaid","category":"CHART-VERADIGM","processed":2381,"paid":202956.24,"submit":2358,"accept":2322,"reject":36,"batch":22,"schedule":14},{"month":"2026-03","market":"Medicaid","category":"Medical-Regular","processed":1867308,"paid":365765887.28,"submit":1426848,"accept":1408682,"reject":18166,"batch":46,"schedule":5},{"month":"2026-03","market":"Medicaid","category":"Medical-Remediation","processed":191709,"paid":45843688,"submit":164349,"accept":154247,"reject":10009,"batch":23,"schedule":21},{"month":"2026-03","market":"Medicaid","category":"OSDS-DENTAL-HLPX","processed":17731,"paid":2911376.68,"submit":0,"accept":17607,"reject":114,"batch":40,"schedule":40},{"month":"2026-03","market":"Medicaid","category":"OSDS-PHARMACY-ESI","processed":2904,"paid":5522374.66,"submit":2876,"accept":2850,"reject":26,"batch":16,"schedule":16},{"month":"2026-03","market":"Medicaid","category":"OSDS-VISION-EYEMED","processed":7290,"paid":624293.53,"submit":7003,"accept":6261,"reject":742,"batch":21,"schedule":14},{"month":"2026-03","market":"Medicaid SCN","category":"OSDS-SCN","processed":8934,"paid":1645762.29,"submit":8093,"accept":7898,"reject":195,"batch":34,"schedule":33},{"month":"2026-03","market":"Medicare","category":"CHART-VERADIGM","processed":2017,"paid":0,"submit":1712,"accept":1096,"reject":610,"batch":37,"schedule":37},{"month":"2026-03","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Dental","processed":185,"paid":22660.87,"submit":185,"accept":185,"reject":0,"batch":8,"schedule":8},{"month":"2026-03","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Tivity","processed":7755,"paid":0,"submit":7755,"accept":7731,"reject":24,"batch":2,"schedule":2},{"month":"2026-03","market":"Medicare","category":"CMS-SUPP-PASS-VEND-Vision","processed":557,"paid":29406.72,"submit":557,"accept":550,"reject":7,"batch":5,"schedule":5},{"month":"2026-03","market":"Medicare","category":"CMS-SUPP-TEMP-VEND-Optum","processed":135,"paid":0,"submit":135,"accept":135,"reject":0,"batch":1,"schedule":1},{"month":"2026-03","market":"Medicare","category":"Medical-Regular","processed":124920,"paid":52815442.61,"submit":119079,"accept":116294,"reject":2785,"batch":7,"schedule":2},{"month":"2026-03","market":"Medicare","category":"Medical-Remediation","processed":195,"paid":35700.33,"submit":159,"accept":156,"reject":3,"batch":1,"schedule":1}];
+
+const ORIG_RAW = RAW.map(r=>({...r}));
+
+// =====================================================================
+// STATE
+// =====================================================================
+let state = {
+  period: 'monthly',
+  markets: new Set(),  // empty = all
+  categories: new Set(), // empty = all
+  fromMonth: '',
+  toMonth: ''
+};
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+const MARKET_COLORS = {
+  'Affinity':'#1e40af','CCI DSNP Medicare':'#7c3aed','CCI Medicare':'#059669',
+  'CT APCD':'#d97706','MA APCD':'#db2777','Medicaid':'#2563eb',
+  'Medicaid SCN':'#9333ea','Medicare':'#0891b2','PPO Medicare':'#ea580c'
+};
+const CAT_COLORS = ['#1e40af','#7c3aed','#059669','#d97706','#db2777','#2563eb','#9333ea','#0891b2','#ea580c','#16a34a','#dc2626','#0e7490','#ca8a04','#be185d'];
+function mColor(m){ return MARKET_COLORS[m]||'#64748b'; }
+
+function fmtCount(n){
+  if(!isFinite(n)||isNaN(n)) return '—';
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.round(n).toLocaleString();
+}
+function fmtDollar(n){
+  if(!isFinite(n)||isNaN(n)) return '—';
+  if(Math.abs(n)>=1e9) return '$'+(n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(0);
+}
+function fmtPct(v){ return (isNaN(v)||!isFinite(v)) ? '—' : (v*100).toFixed(1)+'%'; }
+
+function agg(rows){
+  return rows.reduce((a,r)=>({
+    processed:a.processed+r.processed, paid:a.paid+r.paid, submit:a.submit+r.submit,
+    accept:a.accept+r.accept, reject:a.reject+r.reject, batch:a.batch+r.batch, schedule:a.schedule+r.schedule
+  }),{processed:0,paid:0,submit:0,accept:0,reject:0,batch:0,schedule:0});
+}
+function groupBy(data,key){
+  return data.reduce((a,r)=>{ (a[r[key]]=a[r[key]]||[]).push(r); return a; },{});
+}
+function getQuarter(m){ const mo=parseInt(m.split('-')[1]); return `${m.split('-')[0]}-Q${Math.ceil(mo/3)}`; }
+function getYear(m){ return m.split('-')[0]; }
+
+function getPeriodGroups(data){
+  if(state.period==='monthly') return groupBy(data,'month');
+  if(state.period==='quarterly'){
+    const g={}; data.forEach(r=>{ const q=getQuarter(r.month); (g[q]=g[q]||[]).push(r); }); return g;
+  }
+  const g={}; data.forEach(r=>{ const y=getYear(r.month); (g[y]=g[y]||[]).push(r); }); return g;
+}
+
+function getFiltered(){
+  return RAW.filter(r=>{
+    if(state.markets.size>0 && !state.markets.has(r.market)) return false;
+    if(state.categories.size>0 && !state.categories.has(r.category)) return false;
+    if(state.fromMonth && r.month < state.fromMonth) return false;
+    if(state.toMonth && r.month > state.toMonth) return false;
+    return true;
+  });
+}
+
+// =====================================================================
+// CHART REGISTRY
+// =====================================================================
+const charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+// Base chart defaults
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#e2e8f0';
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 12;
+Chart.defaults.plugins.legend.labels.font = {size:11};
+
+// Combo: grouped bars + line overlay for FPA
+function makeVolComboChart(canvasId, labels, processed, submitted, accepted, fpaVals){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  charts[canvasId] = new Chart(ctx,{
+    data:{
+      labels,
+      datasets:[
+        {type:'bar',label:'Processed',data:processed,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'bar',label:'Submitted',data:submitted,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'bar',label:'Accepted',data:accepted,backgroundColor:'rgba(5,150,105,0.6)',borderColor:'#059669',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'line',label:'FPA %',data:fpaVals,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.08)',pointBackgroundColor:'#d97706',tension:0.4,borderWidth:2.5,pointRadius:4,pointHoverRadius:6,yAxisID:'yPct',order:1},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom'},
+        tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='yPct'?`${c.dataset.label}: ${c.raw.toFixed(1)}%`:`${c.dataset.label}: ${fmtCount(c.raw)}`}}
+      },
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        yCount:{position:'left',ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}},
+        yPct:{position:'right',min:0,max:105,ticks:{callback:v=>v+'%',font:{size:10}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// =====================================================================
+// RENDER ALL
+// =====================================================================
+function renderAll(){
+  const f = getFiltered();
+  renderKPIs(f);
+  renderTrendOverTime(f);
+  renderPaidOverTime(f);
+  renderVolByMarket(f);
+  renderPaidByMarket(f);
+  renderCatMarket(f);
+  renderBatchTime(f);
+  renderBatchMarket(f);
+  renderBatchCat(f);
+  renderTable(f);
+}
+
+// KPIs
+function renderKPIs(data){
+  const t = agg(data);
+  const fpa = t.submit>0 ? t.accept/t.submit : 0;
+  const periods = Object.keys(getPeriodGroups(data)).length;
+  document.getElementById('kpiBatch').textContent = fmtCount(t.batch);
+  document.getElementById('kpiBatchSub').textContent = `Total batch runs`;
+  document.getElementById('kpiSchedule').textContent = fmtCount(t.schedule);
+  document.getElementById('kpiScheduleSub').textContent = `Total schedule runs`;
+  document.getElementById('kpiProcessed').textContent = fmtCount(t.processed);
+  document.getElementById('kpiProcessedSub').textContent = `${periods} ${state.period} period(s)`;
+  document.getElementById('kpiPaid').textContent = fmtDollar(t.paid);
+  document.getElementById('kpiPaidSub').textContent = `Cumulative`;
+  document.getElementById('kpiSubmit').textContent = fmtCount(t.submit);
+  document.getElementById('kpiSubmitSub').textContent = `Claims submitted`;
+  document.getElementById('kpiFPA').textContent = fmtPct(fpa);
+  document.getElementById('kpiFPASub').textContent = fpa>=0.95?'✓ Above 95% target':fpa>=0.9?'~ Near 90-95%':'⚠ Below 90%';
+  document.getElementById('kpiAccept').textContent = fmtCount(t.accept);
+  document.getElementById('kpiAcceptSub').textContent = `Accepted claims`;
+  document.getElementById('kpiReject').textContent = fmtCount(t.reject);
+  document.getElementById('kpiRejectSub').textContent = `Rejected claims`;
+}
+
+// 1. Volume Trend Over Time
+function renderTrendOverTime(data){
+  const groups = getPeriodGroups(data);
+  const labels = Object.keys(groups).sort();
+  const processed = labels.map(l=>agg(groups[l]).processed);
+  const submitted = labels.map(l=>agg(groups[l]).submit);
+  const accepted = labels.map(l=>agg(groups[l]).accept);
+  const fpa = labels.map(l=>{ const t=agg(groups[l]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  document.getElementById('trendBadge').textContent = state.period.charAt(0).toUpperCase()+state.period.slice(1);
+  makeVolComboChart('trendChart', labels, processed, submitted, accepted, fpa);
+}
+
+// 2. Paid Over Time
+function renderPaidOverTime(data){
+  destroyChart('paidTimeChart');
+  const groups = getPeriodGroups(data);
+  const labels = Object.keys(groups).sort();
+  const vals = labels.map(l=>agg(groups[l]).paid);
+  const ctx = document.getElementById('paidTimeChart').getContext('2d');
+  charts['paidTimeChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:'Total Paid',data:vals,backgroundColor:'rgba(5,150,105,0.6)',borderColor:'#059669',borderWidth:1,borderRadius:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Paid: ${fmtDollar(c.raw)}`}}},
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        y:{ticks:{callback:v=>fmtDollar(v),font:{size:10}},grid:{color:'#f1f5f9'}}
+      }
+    }
+  });
+}
+
+// 3. Volume by Market
+function renderVolByMarket(data){
+  const byMarket = groupBy(data,'market');
+  const markets = Object.keys(byMarket).sort((a,b)=>agg(byMarket[b]).processed-agg(byMarket[a]).processed);
+  const processed = markets.map(m=>agg(byMarket[m]).processed);
+  const submitted = markets.map(m=>agg(byMarket[m]).submit);
+  const accepted = markets.map(m=>agg(byMarket[m]).accept);
+  const fpa = markets.map(m=>{ const t=agg(byMarket[m]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  makeVolComboChart('volMarketChart', markets.map(m=>m.length>14?m.substr(0,14)+'…':m), processed, submitted, accepted, fpa);
+}
+
+// 4. Paid by Market
+function renderPaidByMarket(data){
+  destroyChart('paidMarketChart');
+  const byMarket = groupBy(data,'market');
+  const markets = Object.keys(byMarket).sort((a,b)=>agg(byMarket[b]).paid-agg(byMarket[a]).paid);
+  const vals = markets.map(m=>agg(byMarket[m]).paid);
+  const ctx = document.getElementById('paidMarketChart').getContext('2d');
+  charts['paidMarketChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:markets.map(m=>m.length>14?m.substr(0,14)+'…':m),
+      datasets:[{label:'Total Paid',data:vals,
+        backgroundColor:markets.map(m=>mColor(m)+'99'),
+        borderColor:markets.map(m=>mColor(m)),borderWidth:1,borderRadius:3}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Paid: ${fmtDollar(c.raw)}`}}},
+      scales:{
+        x:{ticks:{callback:v=>fmtDollar(v),font:{size:10}},grid:{color:'#f1f5f9'}},
+        y:{ticks:{font:{size:10}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// 5. Category × Market Volume
+function renderCatMarket(data){
+  destroyChart('catMarketChart');
+  const byCat = groupBy(data,'category');
+  // Top 8 categories by processed
+  const cats = Object.keys(byCat).sort((a,b)=>agg(byCat[b]).processed-agg(byCat[a]).processed).slice(0,8);
+  const processed = cats.map(c=>agg(byCat[c]).processed);
+  const submitted = cats.map(c=>agg(byCat[c]).submit);
+  const accepted = cats.map(c=>agg(byCat[c]).accept);
+  const fpa = cats.map(c=>{ const t=agg(byCat[c]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  makeVolComboChart('catMarketChart', cats.map(c=>c.length>22?c.substr(0,22)+'…':c), processed, submitted, accepted, fpa);
+}
+
+// 6. Batch & Schedule Over Time
+function renderBatchTime(data){
+  destroyChart('batchTimeChart');
+  const groups = getPeriodGroups(data);
+  const labels = Object.keys(groups).sort();
+  const batch = labels.map(l=>agg(groups[l]).batch);
+  const sched = labels.map(l=>agg(groups[l]).schedule);
+  const ctx = document.getElementById('batchTimeChart').getContext('2d');
+  charts['batchTimeChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        y:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}}
+      }
+    }
+  });
+}
+
+// 7. Batch & Schedule by Market
+function renderBatchMarket(data){
+  destroyChart('batchMarketChart');
+  const byMarket = groupBy(data,'market');
+  const markets = Object.keys(byMarket).sort((a,b)=>agg(byMarket[b]).batch-agg(byMarket[a]).batch);
+  const batch = markets.map(m=>agg(byMarket[m]).batch);
+  const sched = markets.map(m=>agg(byMarket[m]).schedule);
+  const ctx = document.getElementById('batchMarketChart').getContext('2d');
+  charts['batchMarketChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:markets.map(m=>m.length>12?m.substr(0,12)+'…':m),datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        y:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}}
+      }
+    }
+  });
+}
+
+// 8. Batch & Schedule by Category
+function renderBatchCat(data){
+  destroyChart('batchCatChart');
+  const byCat = groupBy(data,'category');
+  const cats = Object.keys(byCat).sort((a,b)=>agg(byCat[b]).batch-agg(byCat[a]).batch);
+  const batch = cats.map(c=>agg(byCat[c]).batch);
+  const sched = cats.map(c=>agg(byCat[c]).schedule);
+  const ctx = document.getElementById('batchCatChart').getContext('2d');
+  charts['batchCatChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:cats.map(c=>c.length>18?c.substr(0,18)+'…':c),datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:true,indexAxis:'y',
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}},
+        y:{ticks:{font:{size:9}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// TABLE DATA (stored for download)
+let TABLE_ROWS = [];
+
+// Table
+function renderTable(data){
+  const map={};
+  data.forEach(r=>{
+    const k=`${r.market}||${r.category}`;
+    if(!map[k]) map[k]={market:r.market,category:r.category,processed:0,paid:0,submit:0,accept:0,reject:0,batch:0,schedule:0};
+    const m=map[k];
+    m.processed+=r.processed;m.paid+=r.paid;m.submit+=r.submit;
+    m.accept+=r.accept;m.reject+=r.reject;m.batch+=r.batch;m.schedule+=r.schedule;
+  });
+  TABLE_ROWS = Object.values(map).sort((a,b)=>b.processed-a.processed);
+  document.getElementById('tableRowCount').textContent = TABLE_ROWS.length+' rows';
+  document.getElementById('tableSubTitle').textContent = `${TABLE_ROWS.length} market × category combinations · ${state.fromMonth||'All'} to ${state.toMonth||'All'}`;
+  const tbody = document.getElementById('tableBody');
+  if(TABLE_ROWS.length===0){ tbody.innerHTML='<tr><td colspan="10" class="no-data">No data for selected filters</td></tr>'; return; }
+  const fpaColor = v=>v>=0.95?'#059669':v>=0.9?'#d97706':'#dc2626';
+  tbody.innerHTML = TABLE_ROWS.map(r=>{
+    const fpa=r.submit>0?r.accept/r.submit:0;
+    const fc=fpaColor(fpa);
+    const pct=Math.min(100,fpa*100);
+    const mc=mColor(r.market);
+    return `<tr>
+      <td><span class="market-chip" style="background:${mc}18;color:${mc}">${r.market}</span></td>
+      <td style="font-family:'Inter',sans-serif;font-size:11px;color:var(--text-mid)">${r.category}</td>
+      <td class="right bold">${fmtCount(r.processed)}</td>
+      <td class="right">${fmtCount(r.submit)}</td>
+      <td class="right" style="color:var(--green)">${fmtCount(r.accept)}</td>
+      <td class="right" style="color:var(--red)">${fmtCount(r.reject)}</td>
+      <td class="right">
+        <div class="fpa-cell">
+          <div class="fpa-bar-bg"><div class="fpa-bar-fill" style="width:${pct}%;background:${fc}"></div></div>
+          <span style="color:${fc};min-width:40px;text-align:right">${fmtPct(fpa)}</span>
+        </div>
+      </td>
+      <td class="right" style="color:var(--accent)">${fmtDollar(r.paid)}</td>
+      <td class="right">${Math.round(r.batch)}</td>
+      <td class="right">${Math.round(r.schedule)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// =====================================================================
+// DOWNLOAD
+// =====================================================================
+function downloadTable(fmt){
+  if(TABLE_ROWS.length===0){ alert('No data to download.'); return; }
+  const headers = ['Market','Category','Processed','Submitted','Accepted','Rejected','FPA Rate','Paid ($)','Batches','Schedules'];
+  const rows = TABLE_ROWS.map(r=>{
+    const fpa=r.submit>0?r.accept/r.submit:0;
+    return [r.market,r.category,r.processed,r.submit,r.accept,r.reject,parseFloat((fpa*100).toFixed(2)),parseFloat(r.paid.toFixed(2)),r.batch,r.schedule];
+  });
+  if(fmt==='csv'){
+    const csv=[headers,...rows].map(r=>r.map(v=>typeof v==='string'&&v.includes(',') ? `"${v}"` : v).join(',')).join('\n');
+    downloadFile('EDM_Performance_Table.csv', 'text/csv', csv);
+  } else {
+    const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Performance');
+    XLSX.writeFile(wb, 'EDM_Performance_Table.xlsx');
+  }
+}
+function downloadFile(name,type,content){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name; a.click();
+}
+
+// =====================================================================
+// MULTI-SELECT LOGIC
+// =====================================================================
+const msState = { 'ms-market': new Set(), 'ms-category': new Set() };
+
+function toggleMS(id){
+  const dd = document.getElementById(id+'-dd');
+  const trigger = document.querySelector(`#${id} .multiselect-trigger`);
+  const isOpen = dd.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.multiselect-dropdown.open').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.multiselect-trigger.open').forEach(el=>el.classList.remove('open'));
+  if(!isOpen){ dd.classList.add('open'); trigger.classList.add('open'); }
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.multiselect-wrap')){
+    document.querySelectorAll('.multiselect-dropdown.open').forEach(el=>el.classList.remove('open'));
+    document.querySelectorAll('.multiselect-trigger.open').forEach(el=>el.classList.remove('open'));
+  }
+});
+
+function buildMSList(id, items){
+  const list = document.getElementById(id+'-list');
+  list.innerHTML = items.map(item=>`
+    <label class="ms-item" data-value="${item}">
+      <input type="checkbox" value="${item}" onchange="toggleMSItem('${id}','${item}',this.checked)">
+      ${item}
+    </label>`).join('');
+}
+function toggleMSItem(id, val, checked){
+  if(checked) msState[id].add(val); else msState[id].delete(val);
+  updateMSTrigger(id);
+  applyFilters();
+}
+function selectAllMS(id){
+  const items = [...document.querySelectorAll(`#${id}-list .ms-item:not(.hidden) input`)];
+  items.forEach(cb=>{ cb.checked=true; msState[id].add(cb.value); });
+  updateMSTrigger(id); applyFilters();
+}
+function clearAllMS(id){
+  document.querySelectorAll(`#${id}-list input`).forEach(cb=>{ cb.checked=false; });
+  msState[id].clear(); updateMSTrigger(id); applyFilters();
+}
+function updateMSTrigger(id){
+  const count = msState[id].size;
+  const label = id==='ms-market' ? 'Markets' : 'Categories';
+  const badge = document.getElementById(id+'-badge');
+  const lbl = document.getElementById(id+'-label');
+  if(count===0){ lbl.textContent=`All ${label}`; badge.style.display='none'; }
+  else { lbl.textContent=`${count} Selected`; badge.textContent=count; badge.style.display='inline'; }
+}
+function filterMS(id, q){
+  const lower = q.toLowerCase();
+  document.querySelectorAll(`#${id}-list .ms-item`).forEach(el=>{
+    el.classList.toggle('hidden', !el.dataset.value.toLowerCase().includes(lower));
+  });
+}
+
+// =====================================================================
+// PERIOD & FILTERS
+// =====================================================================
+function setPeriod(p, btn){
+  state.period = p;
+  document.querySelectorAll('.btn-group .btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+function applyFilters(){
+  state.markets = msState['ms-market'];
+  state.categories = msState['ms-category'];
+  state.fromMonth = document.getElementById('fromMonth').value;
+  state.toMonth = document.getElementById('toMonth').value;
+  renderAll();
+}
+
+function resetFilters(){
+  msState['ms-market'].clear();
+  msState['ms-category'].clear();
+  document.querySelectorAll('.ms-item input').forEach(cb=>cb.checked=false);
+  updateMSTrigger('ms-market');
+  updateMSTrigger('ms-category');
+  const months = [...document.getElementById('fromMonth').options].map(o=>o.value).sort();
+  if(months.length){
+    document.getElementById('fromMonth').value=months[0];
+    document.getElementById('toMonth').value=months[months.length-1];
+  }
+  applyFilters();
+}
+
+// =====================================================================
+// REBUILD FILTERS (from current RAW data)
+// =====================================================================
+function rebuildFilters(){
+  const months = [...new Set(RAW.map(r=>r.month))].sort();
+  const markets = [...new Set(RAW.map(r=>r.market))].sort();
+  const cats = [...new Set(RAW.map(r=>r.category))].sort();
+
+  const fromSel=document.getElementById('fromMonth'); fromSel.innerHTML='';
+  const toSel=document.getElementById('toMonth'); toSel.innerHTML='';
+  months.forEach(m=>{
+    fromSel.appendChild(Object.assign(document.createElement('option'),{value:m,textContent:m}));
+    toSel.appendChild(Object.assign(document.createElement('option'),{value:m,textContent:m}));
+  });
+  if(months.length) toSel.value=months[months.length-1];
+
+  buildMSList('ms-market', markets);
+  buildMSList('ms-category', cats);
+  msState['ms-market'].clear();
+  msState['ms-category'].clear();
+  updateMSTrigger('ms-market');
+  updateMSTrigger('ms-category');
+}
+
+// =====================================================================
+// EXCEL IMPORT
+// =====================================================================
+function handleFileSelect(e){
+  const file=e.target.files[0]; if(file) processFile(file); e.target.value='';
+}
+function processFile(file){
+  if(!file.name.match(/\.xlsx?$/i)){ alert('Please select an .xlsx or .xls file.'); return; }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:0});
+      const mapped=[];
+      for(const row of rows){
+        const market=row['marketname']||row['market']||'';
+        const category=row['schedule_category']||row['category']||'';
+        const month=String(row['PROC_MONTH']||row['month']||'').trim().substring(0,7);
+        if(!market||!category||!month||month.length<7) continue;
+        mapped.push({
+          month,market,category,
+          processed:+(row['Totalprocessedcount']||row['processed'])||0,
+          paid:+(row['TotalPaidAmount']||row['paid'])||0,
+          submit:+(row['TotalSubmitCount']||row['submit'])||0,
+          accept:+(row['TotalACCEPTCOUNT']||row['accept'])||0,
+          reject:+(row['TotalREJECTCOUNT']||row['reject'])||0,
+          batch:+(row['TotalBatchcount']||row['batch'])||0,
+          schedule:+(row['TotalSchedulecount']||row['schedule'])||0,
+        });
+      }
+      if(mapped.length===0){ alert('No valid data rows found. Check column names.'); return; }
+      RAW.length=0; mapped.forEach(r=>RAW.push(r));
+      document.getElementById('recordCount').textContent=mapped.length+' Records';
+      const pill=document.getElementById('importPill');
+      pill.classList.add('visible');
+      document.getElementById('importPillText').textContent=`${file.name} (${mapped.length} rows)`;
+      document.getElementById('footerText').textContent=`Encounter (EDM) Operational Performance Dashboard · ${file.name} · ${mapped.length} records`;
+      rebuildFilters(); resetFilters();
+    }catch(err){ alert('Error reading file: '+err.message); console.error(err); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function clearImport(){
+  RAW.length=0; ORIG_RAW.forEach(r=>RAW.push(r));
+  document.getElementById('recordCount').textContent='435 Records';
+  document.getElementById('importPill').classList.remove('visible');
+  document.getElementById('footerText').textContent='Encounter (EDM) Operational Performance Dashboard · EH_EDM_Dashboard_Sample_05032026.xlsx · 435 records · Mar 2025 – Mar 2026';
+  rebuildFilters(); resetFilters();
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+rebuildFilters();
+resetFilters();
+</script>
+</body>
+</html>
