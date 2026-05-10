@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encounter (EDM) Operational Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface2: #f7f9fc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --accent: #1e40af;
+  --accent-light: #dbeafe;
+  --accent2: #7c3aed;
+  --accent2-light: #ede9fe;
+  --green: #059669;
+  --green-light: #d1fae5;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --teal: #0891b2;
+  --teal-light: #cffafe;
+  --violet: #7c3aed;
+  --orange: #ea580c;
+  --orange-light: #ffedd5;
+  --text: #0f172a;
+  --text-mid: #374151;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  --header-h: 58px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: var(--shadow);
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-mark {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500; color: #fff;
+  flex-shrink: 0;
+}
+.header-title h1 {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.3px; line-height: 1.2;
+}
+.header-title span { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+/* Compact import button */
+.import-area { display: flex; align-items: center; gap: 8px; }
+.import-compact-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.import-compact-btn:hover { background: #1d3a8b; }
+.import-compact-btn svg { width: 14px; height: 14px; }
+#fileInput { display: none; }
+.import-pill {
+  display: none; align-items: center; gap: 6px;
+  background: var(--green-light); border: 1px solid #86efac;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--green);
+}
+.import-pill.visible { display: flex; }
+.clear-tiny {
+  background: none; border: none; color: #dc2626; cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0 0 0 2px;
+}
+.record-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--accent-light); border: 1px solid #93c5fd;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent);
+}
+.dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── CONTROLS BAR ── */
+.controls-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ctrl-group { display: flex; flex-direction: column; gap: 4px; }
+.ctrl-group-inline { display: flex; align-items: center; gap: 8px; }
+.ctrl-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.btn-group { display: flex; gap: 2px; }
+.btn {
+  padding: 5px 12px; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text-mid);
+  border-radius: 4px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ctrl-divider { width: 1px; height: 36px; background: var(--border); align-self: center; }
+.reset-btn {
+  padding: 5px 10px; background: transparent;
+  border: 1px solid #fca5a5; color: var(--red);
+  border-radius: 4px; cursor: pointer; font-size: 11px;
+  font-family: 'Inter', sans-serif; font-weight: 600;
+  transition: all 0.15s; align-self: flex-end;
+}
+.reset-btn:hover { background: var(--red-light); }
+
+/* Multi-select dropdown */
+.multiselect-wrap { position: relative; }
+.multiselect-trigger {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 5px 10px;
+  cursor: pointer; min-width: 180px; font-size: 11px;
+  color: var(--text-mid); font-family: 'Inter', sans-serif;
+  user-select: none; transition: border-color 0.15s;
+}
+.multiselect-trigger:hover, .multiselect-trigger.open { border-color: var(--accent); }
+.multiselect-trigger .arrow { margin-left: auto; font-size: 9px; color: var(--text-muted); transition: transform 0.15s; }
+.multiselect-trigger.open .arrow { transform: rotate(180deg); }
+.multiselect-badge {
+  background: var(--accent); color: #fff;
+  border-radius: 10px; padding: 1px 6px; font-size: 9px; font-weight: 700;
+}
+.multiselect-dropdown {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 6px; box-shadow: var(--shadow-md);
+  z-index: 300; min-width: 220px; max-height: 280px;
+  flex-direction: column;
+}
+.multiselect-dropdown.open { display: flex; }
+.ms-search {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+.ms-search input {
+  flex: 1; border: none; outline: none; font-size: 11px;
+  font-family: 'Inter', sans-serif; color: var(--text); background: transparent;
+}
+.ms-actions {
+  display: flex; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border);
+}
+.ms-action-btn {
+  font-size: 10px; color: var(--accent); cursor: pointer;
+  font-family: 'Inter', sans-serif; font-weight: 600; border: none; background: none; padding: 0;
+}
+.ms-list { overflow-y: auto; flex: 1; }
+.ms-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; cursor: pointer; font-size: 11px;
+  color: var(--text-mid); transition: background 0.1s;
+}
+.ms-item:hover { background: var(--accent-light); }
+.ms-item input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+.ms-item.hidden { display: none; }
+
+/* Date selects */
+.date-select {
+  appearance: none; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 5px;
+  color: var(--text-mid); padding: 5px 24px 5px 8px;
+  font-family: 'Inter', sans-serif; font-size: 11px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 7px center;
+}
+.date-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── MAIN ── */
+.main { padding: 20px 24px; }
+
+/* Section header */
+.section-hdr {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; margin-top: 20px;
+}
+.section-hdr:first-child { margin-top: 0; }
+.section-hdr h2 {
+  font-size: 12px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;
+}
+.section-hdr::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── KPI CARDS ── */
+.kpi-row { display: grid; grid-template-columns: repeat(8,1fr); gap: 12px; margin-bottom: 8px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 14px 12px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow); transition: box-shadow 0.2s, border-color 0.2s;
+}
+.kpi-card:hover { box-shadow: var(--shadow-md); border-color: var(--kpi-color, var(--accent)); }
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--kpi-color, var(--accent));
+}
+.kpi-icon-bg {
+  position: absolute; top: 10px; right: 10px;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--kpi-bg, var(--accent-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; padding-right: 32px; line-height: 1.3; }
+.kpi-value { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; line-height: 1; }
+.kpi-sub { font-size: 10px; color: var(--text-light); font-family: 'DM Mono', monospace; margin-top: 5px; }
+
+/* ── CHART GRID LAYOUTS ── */
+.charts-1col { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+.charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.charts-3col { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 16px; }
+
+.chart-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 18px 14px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-width: 0;
+}
+.chart-canvas-wrap {
+  position: relative; flex: 1; min-height: 0; width: 100%;
+}
+.chart-canvas-wrap canvas {
+  display: block !important; width: 100% !important;
+}
+.chart-card-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 14px; gap: 8px;
+}
+.chart-card-hdr-left h3 { font-size: 12px; font-weight: 700; color: var(--text); }
+.chart-card-hdr-left p { font-size: 10px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.chart-badge {
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 7px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px;
+}
+.table-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; flex-wrap: wrap; }
+.table-toolbar-left h3 { font-size: 12px; font-weight: 700; color: var(--text); }
+.table-toolbar-left p { font-size: 10px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.table-toolbar-right { display: flex; align-items: center; gap: 8px; }
+.download-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 5px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all 0.15s; border: 1px solid;
+}
+.download-xlsx { background: var(--green-light); color: var(--green); border-color: #86efac; }
+.download-xlsx:hover { background: #a7f3d0; }
+.download-csv { background: var(--amber-light); color: var(--amber); border-color: #fcd34d; }
+.download-csv:hover { background: #fde68a; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { border-bottom: 2px solid var(--border); }
+th {
+  padding: 7px 10px; text-align: left;
+  font-size: 10px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap;
+  background: var(--surface2);
+}
+th:first-child { border-radius: 4px 0 0 4px; }
+th:last-child { border-radius: 0 4px 4px 0; }
+th.right { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:hover { background: #f8fafc; }
+td {
+  padding: 8px 10px; font-size: 11px;
+  font-family: 'DM Mono', monospace; color: var(--text-mid);
+  white-space: nowrap;
+}
+td.right { text-align: right; }
+td.bold { color: var(--text); font-weight: 600; }
+.market-chip {
+  display: inline-block; font-size: 10px; font-family: 'Inter', sans-serif;
+  padding: 2px 7px; border-radius: 4px; font-weight: 600; white-space: nowrap;
+}
+.fpa-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.fpa-bar-bg { width: 50px; height: 4px; background: var(--border); border-radius: 2px; flex-shrink: 0; }
+.fpa-bar-fill { height: 100%; border-radius: 2px; }
+.no-data { text-align: center; padding: 40px; color: var(--text-light); font-family: 'DM Mono', monospace; font-size: 12px; }
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center; padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-light);
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* responsive */
+@media (max-width: 1400px) {
+  .kpi-row { grid-template-columns: repeat(4,1fr); }
+}
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: repeat(4,1fr); }
+  .charts-2col { grid-template-columns: 1fr; }
+  .charts-3col { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .charts-3col { grid-template-columns: 1fr; }
+  .main { padding: 12px; }
+  .header { padding: 0 12px; }
+  .controls-bar { padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">EDM</div>
+    <div class="header-title">
+      <h1>Encounter (EDM) Operational Performance Dashboard</h1>
+      <span id="headerSub">EH EDM · Claims Processing Analytics</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="record-badge" id="recordBadge" style="display:none"><div class="dot"></div><span id="recordCount">0 Records</span></div>
+    <div class="import-area">
+      <div class="import-pill" id="importPill">
+        <span id="importPillText">File loaded</span>
+        <button class="clear-tiny" onclick="clearImport()" title="Clear import">✕</button>
+      </div>
+      <button class="import-compact-btn" onclick="document.getElementById('fileInput').click()" title="Import Excel file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import .xlsx
+      </button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+    </div>
+  </div>
+</header>
+
+<!-- CONTROLS -->
+<div class="controls-bar" id="controlsBar" style="display:none">
+  <div class="ctrl-group">
+    <div class="ctrl-label">Period View</div>
+    <div class="btn-group">
+      <button class="btn active" onclick="setPeriod('monthly',this)">Monthly</button>
+      <button class="btn" onclick="setPeriod('quarterly',this)">Quarterly</button>
+      <button class="btn" onclick="setPeriod('annual',this)">Annual</button>
+    </div>
+  </div>
+  <div class="ctrl-divider"></div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Market</div>
+    <div class="multiselect-wrap" id="ms-market">
+      <div class="multiselect-trigger" onclick="toggleMS('ms-market')">
+        <span id="ms-market-label">All Markets</span>
+        <span class="multiselect-badge" id="ms-market-badge" style="display:none">0</span>
+        <span class="arrow">▾</span>
+      </div>
+      <div class="multiselect-dropdown" id="ms-market-dd">
+        <div class="ms-search"><span>🔍</span><input placeholder="Search markets…" oninput="filterMS('ms-market',this.value)"></div>
+        <div class="ms-actions">
+          <button class="ms-action-btn" onclick="selectAllMS('ms-market')">Select All</button>
+          <span style="color:var(--border2)">|</span>
+          <button class="ms-action-btn" onclick="clearAllMS('ms-market')">Clear All</button>
+        </div>
+        <div class="ms-list" id="ms-market-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Category</div>
+    <div class="multiselect-wrap" id="ms-category">
+      <div class="multiselect-trigger" onclick="toggleMS('ms-category')">
+        <span id="ms-category-label">All Categories</span>
+        <span class="multiselect-badge" id="ms-category-badge" style="display:none">0</span>
+        <span class="arrow">▾</span>
+      </div>
+      <div class="multiselect-dropdown" id="ms-category-dd">
+        <div class="ms-search"><span>🔍</span><input placeholder="Search categories…" oninput="filterMS('ms-category',this.value)"></div>
+        <div class="ms-actions">
+          <button class="ms-action-btn" onclick="selectAllMS('ms-category')">Select All</button>
+          <span style="color:var(--border2)">|</span>
+          <button class="ms-action-btn" onclick="clearAllMS('ms-category')">Clear All</button>
+        </div>
+        <div class="ms-list" id="ms-category-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Date Range</div>
+    <div class="ctrl-group-inline">
+      <select class="date-select" id="fromMonth" onchange="applyFilters()"></select>
+      <span style="font-size:11px;color:var(--text-muted)">→</span>
+      <select class="date-select" id="toMonth" onchange="applyFilters()"></select>
+    </div>
+  </div>
+  <div class="ctrl-group" style="justify-content:flex-end;align-self:flex-end">
+    <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+
+<!-- LANDING SCREEN (shown before any file is imported) -->
+<div id="landingScreen" style="
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:calc(100vh - 58px); padding:40px 24px; text-align:center;
+  background:var(--bg);
+">
+  <div style="
+    background:var(--surface); border:2px dashed var(--border2); border-radius:16px;
+    padding:56px 64px; max-width:520px; width:100%;
+    box-shadow:var(--shadow-md); transition:border-color 0.2s;
+  " id="dropZone"
+    ondragover="landingDragOver(event)"
+    ondragleave="landingDragLeave(event)"
+    ondrop="landingDrop(event)"
+  >
+    <div style="
+      width:72px;height:72px;border-radius:16px;margin:0 auto 20px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex;align-items:center;justify-content:center;font-size:32px;
+    ">📊</div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:10px;letter-spacing:-0.3px;">
+      Import Your Data to Get Started
+    </h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:28px;line-height:1.6;">
+      Upload your <strong>EH_EDM_Dashboard_Sample</strong> Excel file (.xlsx) to populate<br>
+      the Encounter (EDM) Operational Performance Dashboard.
+    </p>
+    <button onclick="document.getElementById('fileInput2').click()" style="
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--accent);color:#fff;border:none;border-radius:8px;
+      padding:12px 28px;font-family:'Inter',sans-serif;font-size:14px;
+      font-weight:600;cursor:pointer;transition:background 0.15s;margin-bottom:16px;
+    " onmouseover="this.style.background='#1d3a8b'" onmouseout="this.style.background='var(--accent)'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Choose Excel File
+    </button>
+    <input type="file" id="fileInput2" accept=".xlsx,.xls" onchange="handleFileSelect2(event)" style="display:none">
+    <div style="font-size:11px;color:var(--text-light);font-family:'DM Mono',monospace;">
+      or drag &amp; drop your .xlsx file here
+    </div>
+    <div id="landingStatus" style="
+      margin-top:16px;font-size:12px;font-family:'DM Mono',monospace;
+      color:var(--text-muted);min-height:20px;
+    "></div>
+  </div>
+  <div style="margin-top:20px;font-size:11px;color:var(--text-light);font-family:'DM Mono',monospace;">
+    Encounter (EDM) Operational Performance Dashboard · EH EDM Claims Processing Analytics
+  </div>
+</div>
+
+<main class="main" id="dashMain" style="display:none">
+
+  <!-- KPIs -->
+  <div class="section-hdr"><h2>Executive Summary</h2></div>
+  <div class="kpi-row">
+    <div class="kpi-card" style="--kpi-color:#7c3aed;--kpi-bg:#ede9fe">
+      <div class="kpi-icon-bg">🗂️</div>
+      <div class="kpi-label">Batch Count</div>
+      <div class="kpi-value" id="kpiBatch">—</div>
+      <div class="kpi-sub" id="kpiBatchSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#0891b2;--kpi-bg:#cffafe">
+      <div class="kpi-icon-bg">📅</div>
+      <div class="kpi-label">Schedule Count</div>
+      <div class="kpi-value" id="kpiSchedule">—</div>
+      <div class="kpi-sub" id="kpiScheduleSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#1e40af;--kpi-bg:#dbeafe">
+      <div class="kpi-icon-bg">📊</div>
+      <div class="kpi-label">Total Processed</div>
+      <div class="kpi-value" id="kpiProcessed">—</div>
+      <div class="kpi-sub" id="kpiProcessedSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#059669;--kpi-bg:#d1fae5">
+      <div class="kpi-icon-bg">💰</div>
+      <div class="kpi-label">Total Paid Amount</div>
+      <div class="kpi-value" id="kpiPaid">—</div>
+      <div class="kpi-sub" id="kpiPaidSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#ea580c;--kpi-bg:#ffedd5">
+      <div class="kpi-icon-bg">📤</div>
+      <div class="kpi-label">Total Submitted</div>
+      <div class="kpi-value" id="kpiSubmit">—</div>
+      <div class="kpi-sub" id="kpiSubmitSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#d97706;--kpi-bg:#fef3c7">
+      <div class="kpi-icon-bg">🎯</div>
+      <div class="kpi-label">First Pass Accept %</div>
+      <div class="kpi-value" id="kpiFPA">—</div>
+      <div class="kpi-sub" id="kpiFPASub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#059669;--kpi-bg:#d1fae5">
+      <div class="kpi-icon-bg">✅</div>
+      <div class="kpi-label">Total Accepted</div>
+      <div class="kpi-value" id="kpiAccept">—</div>
+      <div class="kpi-sub" id="kpiAcceptSub">—</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#dc2626;--kpi-bg:#fee2e2">
+      <div class="kpi-icon-bg">❌</div>
+      <div class="kpi-label">Total Rejected</div>
+      <div class="kpi-value" id="kpiReject">—</div>
+      <div class="kpi-sub" id="kpiRejectSub">—</div>
+    </div>
+  </div>
+
+  <!-- VOLUME TRENDS OVER TIME -->
+  <div class="section-hdr"><h2>Volume Trends Over Time</h2></div>
+  <div class="charts-1col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend Over Time</h3>
+          <p>Processed · Submitted · Accepted counts + FPA % trend line</p>
+        </div>
+        <span class="chart-badge" id="trendBadge">Monthly</span>
+      </div>
+      <div class="chart-canvas-wrap" style="height:280px">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOLUME ACROSS MARKETS -->
+  <div class="section-hdr"><h2>Volume Across Markets</h2></div>
+  <div class="charts-1col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend Across Markets</h3>
+          <p>Processed · Submitted · Accepted + FPA % per market</p>
+        </div>
+        <span class="chart-badge">By Market</span>
+      </div>
+      <div class="chart-canvas-wrap" style="height:280px">
+        <canvas id="volMarketChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOLUME BY CATEGORY × MARKET -->
+  <div class="section-hdr"><h2>Volume by Category Across Markets</h2></div>
+  <div class="charts-1col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Volume Trend per Category Across Markets</h3>
+          <p>Processed · Submitted · Accepted + FPA % — top 8 categories by volume</p>
+        </div>
+        <span class="chart-badge">Category × Market</span>
+      </div>
+      <div class="chart-canvas-wrap" style="height:260px">
+        <canvas id="catMarketChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATCH & SCHEDULE -->
+  <div class="section-hdr"><h2>Batch &amp; Schedule Activity</h2></div>
+  <div class="charts-3col">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule Over Time</h3>
+          <p>Total counts by period</p>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:220px">
+        <canvas id="batchTimeChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule by Market</h3>
+          <p>Total counts per market</p>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:220px">
+        <canvas id="batchMarketChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <div class="chart-card-hdr-left">
+          <h3>Batch &amp; Schedule by Category</h3>
+          <p>Total counts per schedule category</p>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:220px">
+        <canvas id="batchCatChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="section-hdr"><h2>Market × Category Performance Detail</h2></div>
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="table-toolbar-left">
+        <h3>Market × Category Performance Table</h3>
+        <p id="tableSubTitle">Aggregated data for selected filters</p>
+      </div>
+      <div class="table-toolbar-right">
+        <span style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace" id="tableRowCount">0 rows</span>
+        <button class="download-btn download-xlsx" onclick="downloadTable('xlsx')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download .xlsx
+        </button>
+        <button class="download-btn download-csv" onclick="downloadTable('csv')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download .csv
+        </button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Market</th>
+            <th>Category</th>
+            <th class="right">Processed</th>
+            <th class="right">Submitted</th>
+            <th class="right">Accepted</th>
+            <th class="right">Rejected</th>
+            <th class="right">FPA Rate</th>
+            <th class="right">Paid ($)</th>
+            <th class="right">Batches</th>
+            <th class="right">Schedules</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="10" class="no-data">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+<div class="footer" id="footerText" style="display:none">Encounter (EDM) Operational Performance Dashboard · EH_EDM_Dashboard_Sample_05032026.xlsx · 435 records · Mar 2025 – Mar 2026</div>
+
+<script>
+// =====================================================================
+// DATA
+// =====================================================================
+const RAW = []
+
+
+// =====================================================================
+// STATE
+// =====================================================================
+let state = {
+  period: 'monthly',
+  markets: new Set(),  // empty = all
+  categories: new Set(), // empty = all
+  fromMonth: '',
+  toMonth: ''
+};
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+const MARKET_COLORS = {
+  'Affinity':'#1e40af','CCI DSNP Medicare':'#7c3aed','CCI Medicare':'#059669',
+  'CT APCD':'#d97706','MA APCD':'#db2777','Medicaid':'#2563eb',
+  'Medicaid SCN':'#9333ea','Medicare':'#0891b2','PPO Medicare':'#ea580c'
+};
+const CAT_COLORS = ['#1e40af','#7c3aed','#059669','#d97706','#db2777','#2563eb','#9333ea','#0891b2','#ea580c','#16a34a','#dc2626','#0e7490','#ca8a04','#be185d'];
+function mColor(m){ return MARKET_COLORS[m]||'#64748b'; }
+
+function fmtCount(n){
+  if(!isFinite(n)||isNaN(n)) return '—';
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.round(n).toLocaleString();
+}
+function fmtDollar(n){
+  if(!isFinite(n)||isNaN(n)) return '—';
+  if(Math.abs(n)>=1e9) return '$'+(n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(0);
+}
+function fmtPct(v){ return (isNaN(v)||!isFinite(v)) ? '—' : (v*100).toFixed(1)+'%'; }
+
+function agg(rows){
+  return rows.reduce((a,r)=>({
+    processed:a.processed+r.processed, paid:a.paid+r.paid, submit:a.submit+r.submit,
+    accept:a.accept+r.accept, reject:a.reject+r.reject, batch:a.batch+r.batch, schedule:a.schedule+r.schedule
+  }),{processed:0,paid:0,submit:0,accept:0,reject:0,batch:0,schedule:0});
+}
+function groupBy(data,key){
+  return data.reduce((a,r)=>{ (a[r[key]]=a[r[key]]||[]).push(r); return a; },{});
+}
+function getQuarter(m){ const mo=parseInt(m.split('-')[1]); return `${m.split('-')[0]}-Q${Math.ceil(mo/3)}`; }
+function getYear(m){ return m.split('-')[0]; }
+
+function getPeriodGroups(data){
+  if(state.period==='monthly') return groupBy(data,'month');
+  if(state.period==='quarterly'){
+    const g={}; data.forEach(r=>{ const q=getQuarter(r.month); (g[q]=g[q]||[]).push(r); }); return g;
+  }
+  const g={}; data.forEach(r=>{ const y=getYear(r.month); (g[y]=g[y]||[]).push(r); }); return g;
+}
+
+function getFiltered(){
+  return RAW.filter(r=>{
+    if(state.markets.size>0 && !state.markets.has(r.market)) return false;
+    if(state.categories.size>0 && !state.categories.has(r.category)) return false;
+    if(state.fromMonth && r.month < state.fromMonth) return false;
+    if(state.toMonth && r.month > state.toMonth) return false;
+    return true;
+  });
+}
+
+// =====================================================================
+// CHART REGISTRY
+// =====================================================================
+const charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+// Base chart defaults
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#e2e8f0';
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 12;
+Chart.defaults.plugins.legend.labels.font = {size:11};
+
+// Combo: grouped bars + line overlay for FPA
+function makeVolComboChart(canvasId, labels, processed, submitted, accepted, fpaVals){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  charts[canvasId] = new Chart(ctx,{
+    data:{
+      labels,
+      datasets:[
+        {type:'bar',label:'Processed',data:processed,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'bar',label:'Submitted',data:submitted,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'bar',label:'Accepted',data:accepted,backgroundColor:'rgba(5,150,105,0.6)',borderColor:'#059669',borderWidth:1,borderRadius:3,yAxisID:'yCount',order:2},
+        {type:'line',label:'FPA %',data:fpaVals,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.08)',pointBackgroundColor:'#d97706',tension:0.4,borderWidth:2.5,pointRadius:4,pointHoverRadius:6,yAxisID:'yPct',order:1},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom'},
+        tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='yPct'?`${c.dataset.label}: ${c.raw.toFixed(1)}%`:`${c.dataset.label}: ${fmtCount(c.raw)}`}}
+      },
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        yCount:{position:'left',ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}},
+        yPct:{position:'right',min:0,max:105,ticks:{callback:v=>v+'%',font:{size:10}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// =====================================================================
+// RENDER ALL
+// =====================================================================
+function renderAll(){
+  // Don't render if the dashboard is still hidden (canvases would be zero-size)
+  if(document.getElementById('dashMain').style.display === 'none') return;
+  const f = getFiltered();
+  renderKPIs(f);
+  renderTrendOverTime(f);
+  renderVolByMarket(f);
+  renderCatMarket(f);
+  renderBatchTime(f);
+  renderBatchMarket(f);
+  renderBatchCat(f);
+  renderTable(f);
+}
+
+// KPIs
+function renderKPIs(data){
+  const t = agg(data);
+  const fpa = t.submit>0 ? t.accept/t.submit : 0;
+  const periods = Object.keys(getPeriodGroups(data)).length;
+  document.getElementById('kpiBatch').textContent = fmtCount(t.batch);
+  document.getElementById('kpiBatchSub').textContent = `Total batch runs`;
+  document.getElementById('kpiSchedule').textContent = fmtCount(t.schedule);
+  document.getElementById('kpiScheduleSub').textContent = `Total schedule runs`;
+  document.getElementById('kpiProcessed').textContent = fmtCount(t.processed);
+  document.getElementById('kpiProcessedSub').textContent = `${periods} ${state.period} period(s)`;
+  document.getElementById('kpiPaid').textContent = fmtDollar(t.paid);
+  document.getElementById('kpiPaidSub').textContent = `Cumulative`;
+  document.getElementById('kpiSubmit').textContent = fmtCount(t.submit);
+  document.getElementById('kpiSubmitSub').textContent = `Claims submitted`;
+  document.getElementById('kpiFPA').textContent = fmtPct(fpa);
+  document.getElementById('kpiFPASub').textContent = fpa>=0.95?'✓ Above 95% target':fpa>=0.9?'~ Near 90-95%':'⚠ Below 90%';
+  document.getElementById('kpiAccept').textContent = fmtCount(t.accept);
+  document.getElementById('kpiAcceptSub').textContent = `Accepted claims`;
+  document.getElementById('kpiReject').textContent = fmtCount(t.reject);
+  document.getElementById('kpiRejectSub').textContent = `Rejected claims`;
+}
+
+// 1. Volume Trend Over Time
+function renderTrendOverTime(data){
+  const groups = getPeriodGroups(data);
+  const labels = Object.keys(groups).sort();
+  const processed = labels.map(l=>agg(groups[l]).processed);
+  const submitted = labels.map(l=>agg(groups[l]).submit);
+  const accepted = labels.map(l=>agg(groups[l]).accept);
+  const fpa = labels.map(l=>{ const t=agg(groups[l]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  document.getElementById('trendBadge').textContent = state.period.charAt(0).toUpperCase()+state.period.slice(1);
+  makeVolComboChart('trendChart', labels, processed, submitted, accepted, fpa);
+}
+
+// 2. Volume by Market
+function renderVolByMarket(data){
+  const byMarket = groupBy(data,'market');
+  const markets = Object.keys(byMarket).sort((a,b)=>agg(byMarket[b]).processed-agg(byMarket[a]).processed);
+  const processed = markets.map(m=>agg(byMarket[m]).processed);
+  const submitted = markets.map(m=>agg(byMarket[m]).submit);
+  const accepted = markets.map(m=>agg(byMarket[m]).accept);
+  const fpa = markets.map(m=>{ const t=agg(byMarket[m]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  makeVolComboChart('volMarketChart', markets.map(m=>m.length>14?m.substr(0,14)+'…':m), processed, submitted, accepted, fpa);
+}
+
+// 3. Category × Market Volume
+function renderCatMarket(data){
+  destroyChart('catMarketChart');
+  const byCat = groupBy(data,'category');
+  // Top 8 categories by processed
+  const cats = Object.keys(byCat).sort((a,b)=>agg(byCat[b]).processed-agg(byCat[a]).processed).slice(0,8);
+  const processed = cats.map(c=>agg(byCat[c]).processed);
+  const submitted = cats.map(c=>agg(byCat[c]).submit);
+  const accepted = cats.map(c=>agg(byCat[c]).accept);
+  const fpa = cats.map(c=>{ const t=agg(byCat[c]); return t.submit>0?(t.accept/t.submit)*100:0; });
+  makeVolComboChart('catMarketChart', cats.map(c=>c.length>22?c.substr(0,22)+'…':c), processed, submitted, accepted, fpa);
+}
+
+// 6. Batch & Schedule Over Time
+function renderBatchTime(data){
+  destroyChart('batchTimeChart');
+  const groups = getPeriodGroups(data);
+  const labels = Object.keys(groups).sort();
+  const batch = labels.map(l=>agg(groups[l]).batch);
+  const sched = labels.map(l=>agg(groups[l]).schedule);
+  const ctx = document.getElementById('batchTimeChart').getContext('2d');
+  charts['batchTimeChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        y:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}}
+      }
+    }
+  });
+}
+
+// 7. Batch & Schedule by Market
+function renderBatchMarket(data){
+  destroyChart('batchMarketChart');
+  const byMarket = groupBy(data,'market');
+  const markets = Object.keys(byMarket).sort((a,b)=>agg(byMarket[b]).batch-agg(byMarket[a]).batch);
+  const batch = markets.map(m=>agg(byMarket[m]).batch);
+  const sched = markets.map(m=>agg(byMarket[m]).schedule);
+  const ctx = document.getElementById('batchMarketChart').getContext('2d');
+  charts['batchMarketChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:markets.map(m=>m.length>12?m.substr(0,12)+'…':m),datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{maxRotation:40,font:{size:10}},grid:{display:false}},
+        y:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}}
+      }
+    }
+  });
+}
+
+// 8. Batch & Schedule by Category
+function renderBatchCat(data){
+  destroyChart('batchCatChart');
+  const byCat = groupBy(data,'category');
+  const cats = Object.keys(byCat).sort((a,b)=>agg(byCat[b]).batch-agg(byCat[a]).batch);
+  const batch = cats.map(c=>agg(byCat[c]).batch);
+  const sched = cats.map(c=>agg(byCat[c]).schedule);
+  const ctx = document.getElementById('batchCatChart').getContext('2d');
+  charts['batchCatChart'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:cats.map(c=>c.length>18?c.substr(0,18)+'…':c),datasets:[
+      {label:'Batch',data:batch,backgroundColor:'rgba(30,64,175,0.6)',borderColor:'#1e40af',borderWidth:1,borderRadius:3},
+      {label:'Schedule',data:sched,backgroundColor:'rgba(124,58,237,0.6)',borderColor:'#7c3aed',borderWidth:1,borderRadius:3}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCount(c.raw)}`}}},
+      scales:{
+        x:{ticks:{callback:v=>fmtCount(v),font:{size:10}},grid:{color:'#f1f5f9'}},
+        y:{ticks:{font:{size:9}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// TABLE DATA (stored for download)
+let TABLE_ROWS = [];
+
+// Table
+function renderTable(data){
+  const map={};
+  data.forEach(r=>{
+    const k=`${r.market}||${r.category}`;
+    if(!map[k]) map[k]={market:r.market,category:r.category,processed:0,paid:0,submit:0,accept:0,reject:0,batch:0,schedule:0};
+    const m=map[k];
+    m.processed+=r.processed;m.paid+=r.paid;m.submit+=r.submit;
+    m.accept+=r.accept;m.reject+=r.reject;m.batch+=r.batch;m.schedule+=r.schedule;
+  });
+  TABLE_ROWS = Object.values(map).sort((a,b)=>b.processed-a.processed);
+  document.getElementById('tableRowCount').textContent = TABLE_ROWS.length+' rows';
+  document.getElementById('tableSubTitle').textContent = `${TABLE_ROWS.length} market × category combinations · ${state.fromMonth||'All'} to ${state.toMonth||'All'}`;
+  const tbody = document.getElementById('tableBody');
+  if(TABLE_ROWS.length===0){ tbody.innerHTML='<tr><td colspan="10" class="no-data">No data for selected filters</td></tr>'; return; }
+  const fpaColor = v=>v>=0.95?'#059669':v>=0.9?'#d97706':'#dc2626';
+  tbody.innerHTML = TABLE_ROWS.map(r=>{
+    const fpa=r.submit>0?r.accept/r.submit:0;
+    const fc=fpaColor(fpa);
+    const pct=Math.min(100,fpa*100);
+    const mc=mColor(r.market);
+    return `<tr>
+      <td><span class="market-chip" style="background:${mc}18;color:${mc}">${r.market}</span></td>
+      <td style="font-family:'Inter',sans-serif;font-size:11px;color:var(--text-mid)">${r.category}</td>
+      <td class="right bold">${fmtCount(r.processed)}</td>
+      <td class="right">${fmtCount(r.submit)}</td>
+      <td class="right" style="color:var(--green)">${fmtCount(r.accept)}</td>
+      <td class="right" style="color:var(--red)">${fmtCount(r.reject)}</td>
+      <td class="right">
+        <div class="fpa-cell">
+          <div class="fpa-bar-bg"><div class="fpa-bar-fill" style="width:${pct}%;background:${fc}"></div></div>
+          <span style="color:${fc};min-width:40px;text-align:right">${fmtPct(fpa)}</span>
+        </div>
+      </td>
+      <td class="right" style="color:var(--accent)">${fmtDollar(r.paid)}</td>
+      <td class="right">${Math.round(r.batch)}</td>
+      <td class="right">${Math.round(r.schedule)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// =====================================================================
+// DOWNLOAD
+// =====================================================================
+function downloadTable(fmt){
+  if(TABLE_ROWS.length===0){ alert('No data to download.'); return; }
+  const headers = ['Market','Category','Processed','Submitted','Accepted','Rejected','FPA Rate','Paid ($)','Batches','Schedules'];
+  const rows = TABLE_ROWS.map(r=>{
+    const fpa=r.submit>0?r.accept/r.submit:0;
+    return [r.market,r.category,r.processed,r.submit,r.accept,r.reject,parseFloat((fpa*100).toFixed(2)),parseFloat(r.paid.toFixed(2)),r.batch,r.schedule];
+  });
+  if(fmt==='csv'){
+    const csv=[headers,...rows].map(r=>r.map(v=>typeof v==='string'&&v.includes(',') ? `"${v}"` : v).join(',')).join('\n');
+    downloadFile('EDM_Performance_Table.csv', 'text/csv', csv);
+  } else {
+    const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Performance');
+    XLSX.writeFile(wb, 'EDM_Performance_Table.xlsx');
+  }
+}
+function downloadFile(name,type,content){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name; a.click();
+}
+
+// =====================================================================
+// MULTI-SELECT LOGIC
+// =====================================================================
+const msState = { 'ms-market': new Set(), 'ms-category': new Set() };
+
+function toggleMS(id){
+  const dd = document.getElementById(id+'-dd');
+  const trigger = document.querySelector(`#${id} .multiselect-trigger`);
+  const isOpen = dd.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.multiselect-dropdown.open').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.multiselect-trigger.open').forEach(el=>el.classList.remove('open'));
+  if(!isOpen){ dd.classList.add('open'); trigger.classList.add('open'); }
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.multiselect-wrap')){
+    document.querySelectorAll('.multiselect-dropdown.open').forEach(el=>el.classList.remove('open'));
+    document.querySelectorAll('.multiselect-trigger.open').forEach(el=>el.classList.remove('open'));
+  }
+});
+
+function buildMSList(id, items){
+  const list = document.getElementById(id+'-list');
+  list.innerHTML = items.map(item=>`
+    <label class="ms-item" data-value="${item}">
+      <input type="checkbox" value="${item}" onchange="toggleMSItem('${id}','${item}',this.checked)">
+      ${item}
+    </label>`).join('');
+}
+function toggleMSItem(id, val, checked){
+  if(checked) msState[id].add(val); else msState[id].delete(val);
+  updateMSTrigger(id);
+  applyFilters();
+}
+function selectAllMS(id){
+  const items = [...document.querySelectorAll(`#${id}-list .ms-item:not(.hidden) input`)];
+  items.forEach(cb=>{ cb.checked=true; msState[id].add(cb.value); });
+  updateMSTrigger(id); applyFilters();
+}
+function clearAllMS(id){
+  document.querySelectorAll(`#${id}-list input`).forEach(cb=>{ cb.checked=false; });
+  msState[id].clear(); updateMSTrigger(id); applyFilters();
+}
+function updateMSTrigger(id){
+  const count = msState[id].size;
+  const label = id==='ms-market' ? 'Markets' : 'Categories';
+  const badge = document.getElementById(id+'-badge');
+  const lbl = document.getElementById(id+'-label');
+  if(count===0){ lbl.textContent=`All ${label}`; badge.style.display='none'; }
+  else { lbl.textContent=`${count} Selected`; badge.textContent=count; badge.style.display='inline'; }
+}
+function filterMS(id, q){
+  const lower = q.toLowerCase();
+  document.querySelectorAll(`#${id}-list .ms-item`).forEach(el=>{
+    el.classList.toggle('hidden', !el.dataset.value.toLowerCase().includes(lower));
+  });
+}
+
+// =====================================================================
+// PERIOD & FILTERS
+// =====================================================================
+function setPeriod(p, btn){
+  state.period = p;
+  document.querySelectorAll('.btn-group .btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+function applyFilters(){
+  state.markets = msState['ms-market'];
+  state.categories = msState['ms-category'];
+  state.fromMonth = document.getElementById('fromMonth').value;
+  state.toMonth = document.getElementById('toMonth').value;
+  renderAll();
+}
+
+function resetFilters(){
+  msState['ms-market'].clear();
+  msState['ms-category'].clear();
+  document.querySelectorAll('.ms-item input').forEach(cb=>cb.checked=false);
+  updateMSTrigger('ms-market');
+  updateMSTrigger('ms-category');
+  const months = [...document.getElementById('fromMonth').options].map(o=>o.value).sort();
+  if(months.length){
+    document.getElementById('fromMonth').value=months[0];
+    document.getElementById('toMonth').value=months[months.length-1];
+  }
+  applyFilters();
+}
+
+// =====================================================================
+// REBUILD FILTERS (from current RAW data)
+// =====================================================================
+function rebuildFilters(){
+  const months = [...new Set(RAW.map(r=>r.month))].sort();
+  const markets = [...new Set(RAW.map(r=>r.market))].sort();
+  const cats = [...new Set(RAW.map(r=>r.category))].sort();
+
+  const fromSel=document.getElementById('fromMonth'); fromSel.innerHTML='';
+  const toSel=document.getElementById('toMonth'); toSel.innerHTML='';
+  months.forEach(m=>{
+    fromSel.appendChild(Object.assign(document.createElement('option'),{value:m,textContent:m}));
+    toSel.appendChild(Object.assign(document.createElement('option'),{value:m,textContent:m}));
+  });
+  if(months.length) toSel.value=months[months.length-1];
+
+  buildMSList('ms-market', markets);
+  buildMSList('ms-category', cats);
+  msState['ms-market'].clear();
+  msState['ms-category'].clear();
+  updateMSTrigger('ms-market');
+  updateMSTrigger('ms-category');
+}
+
+// =====================================================================
+// EXCEL IMPORT
+// =====================================================================
+function handleFileSelect(e){
+  const file=e.target.files[0]; if(file) processFile(file); e.target.value='';
+}
+// Landing drag-and-drop helpers
+function landingDragOver(e){
+  e.preventDefault(); e.stopPropagation();
+  const z=document.getElementById('dropZone');
+  z.style.borderColor='var(--accent)'; z.style.background='var(--accent-light)';
+}
+function landingDragLeave(e){
+  const z=document.getElementById('dropZone');
+  z.style.borderColor=''; z.style.background='';
+}
+function landingDrop(e){
+  e.preventDefault(); e.stopPropagation();
+  landingDragLeave(e);
+  const file=e.dataTransfer.files[0]; if(file) processFile(file);
+}
+function handleFileSelect2(e){
+  const file=e.target.files[0]; if(file) processFile(file); e.target.value='';
+}
+
+function processFile(file){
+  if(!file.name.match(/\.xlsx?$/i)){ alert('Please select an .xlsx or .xls file.'); return; }
+  const ls=document.getElementById('landingStatus');
+  if(ls) ls.textContent='⏳ Reading file…';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      // raw:true ensures currency/date-formatted cells return raw numeric values
+      // not their display strings (e.g. '$18,632.67' → 18632.67)
+      const rows=XLSX.utils.sheet_to_json(ws,{raw:true, defval:null});
+      const mapped=[];
+      for(const row of rows){
+        const market=row['marketname']??row['market']??'';
+        const category=row['schedule_category']??row['category']??'';
+        const month=String(row['PROC_MONTH']??row['month']??'').trim().substring(0,7);
+        if(!market||!category||!month||month.length<7) continue;
+        // Use ?? (nullish coalescing) not || to avoid treating 0 as missing
+        const parsePaid = v => { const n=parseFloat(v); return isNaN(n)?0:n; };
+        const parseNum  = v => { const n=parseInt(v);   return isNaN(n)?0:n; };
+        mapped.push({
+          month, market, category,
+          processed: parseNum(row['Totalprocessedcount']??row['processed']),
+          paid:      parsePaid(row['TotalPaidAmount']??row['paid']),
+          submit:    parseNum(row['TotalSubmitCount']??row['submit']),
+          accept:    parseNum(row['TotalACCEPTCOUNT']??row['accept']),
+          reject:    parseNum(row['TotalREJECTCOUNT']??row['reject']),
+          batch:     parseNum(row['TotalBatchcount']??row['batch']),
+          schedule:  parseNum(row['TotalSchedulecount']??row['schedule']),
+        });
+      }
+      if(mapped.length===0){
+        if(ls) ls.textContent='⚠ No valid rows found. Check column names.';
+        return;
+      }
+      RAW.length=0; mapped.forEach(r=>RAW.push(r));
+
+      // Show dashboard, hide landing
+      document.getElementById('landingScreen').style.display='none';
+      document.getElementById('controlsBar').style.display='flex';
+      document.getElementById('dashMain').style.display='block';
+      document.getElementById('footerText').style.display='block';
+
+      // Update header meta
+      document.getElementById('recordCount').textContent=mapped.length+' Records';
+      document.getElementById('recordBadge').style.display='flex';
+      document.getElementById('headerSub').textContent=`EH EDM · ${file.name} · ${mapped.length} records`;
+
+      // Show import pill
+      const pill=document.getElementById('importPill');
+      pill.classList.add('visible');
+      document.getElementById('importPillText').textContent=`${file.name} (${mapped.length} rows)`;
+
+      // Footer
+      const months=[...new Set(RAW.map(r=>r.month))].sort();
+      document.getElementById('footerText').textContent=
+        `Encounter (EDM) Operational Performance Dashboard · ${file.name} · ${mapped.length} records · ${months[0]||''} – ${months[months.length-1]||''}`;
+
+      rebuildFilters();
+      // Defer renderAll until after the browser has reflowed the newly-visible DOM
+      // so all canvas elements have real pixel dimensions before Chart.js touches them.
+      requestAnimationFrame(() => requestAnimationFrame(() => resetFilters()));
+    }catch(err){
+      if(ls) ls.textContent='✗ Error: '+err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearImport(){
+  RAW.length=0;
+  // Reset all charts
+  Object.keys(charts).forEach(id=>{ if(charts[id]){ charts[id].destroy(); delete charts[id]; } });
+
+  // Hide dashboard, show landing
+  document.getElementById('landingScreen').style.display='flex';
+  document.getElementById('controlsBar').style.display='none';
+  document.getElementById('dashMain').style.display='none';
+  document.getElementById('footerText').style.display='none';
+  document.getElementById('recordBadge').style.display='none';
+  document.getElementById('recordCount').textContent='0 Records';
+  document.getElementById('importPill').classList.remove('visible');
+  document.getElementById('headerSub').textContent='EH EDM · Claims Processing Analytics';
+  if(document.getElementById('landingStatus'))
+    document.getElementById('landingStatus').textContent='';
+  rebuildFilters();
+}
+
+// =====================================================================
+// INIT — dashboard starts blank; waits for file import
+// =====================================================================
+// Nothing to render on load — landing screen is shown instead
+// rebuildFilters() and resetFilters() are called after file import
+</script>
+</body>
+</html>
